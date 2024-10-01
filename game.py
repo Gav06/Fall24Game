@@ -16,6 +16,20 @@ screen = pygame.display.set_mode(resolution)
 clock = pygame.time.Clock()
 running = True
 
+
+# Setup 5x5 game board
+EMPTY = 0
+CROSS = 1
+RING = 2
+
+board = [[EMPTY] * 5] * 5
+
+
+# Initially fill it all with 0 (empty spaces)
+for i in range(5):
+    for j in range(5):
+        board[i][j] = 0
+
 # Game's main loop
 while running:
 
