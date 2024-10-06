@@ -11,6 +11,8 @@ import pygame
 
 pygame.init()
 
+white = (255, 255, 255)
+
 resolution = (640, 480)
 screen = pygame.display.set_mode(resolution)
 clock = pygame.time.Clock()
