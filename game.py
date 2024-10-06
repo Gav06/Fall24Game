@@ -42,10 +42,8 @@ def game_loop(): # Game's main loop
         clock.tick(60)
 
 
-pygame.quit()
 game_loop()
-#test comment
-print("This is a git test") #comment
+pygame.quit()
 
 
 
