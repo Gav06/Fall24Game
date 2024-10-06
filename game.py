@@ -24,12 +24,6 @@ RING = 2
 
 board = [[EMPTY] * 5] * 5
 
-
-# Initially fill it all with 0 (empty spaces)
-for i in range(5):
-    for j in range(5):
-        board[i][j] = 0
-
 # Game's main loop
 while running:
 
@@ -42,3 +36,5 @@ while running:
     clock.tick(60)
 
 pygame.quit()
+
+print("This is a git test")
