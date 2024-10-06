@@ -45,7 +45,7 @@ def game_loop(): # Game's main loop
 pygame.quit()
 game_loop()
 #test comment
-print("This is a git test")
+print("This is a git test") #comment
 
 
 
