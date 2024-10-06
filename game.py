@@ -38,5 +38,3 @@ while running:
     clock.tick(60)
 
 pygame.quit()
-
-print("This is a git test")
