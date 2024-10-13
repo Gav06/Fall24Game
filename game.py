@@ -15,16 +15,15 @@ pygame.init()
 
 white = (255, 255, 255)   #lines
 dark_grey = (90, 90, 90)  #background
+
 red = (255, 0, 0)         #  X's
 green = (0, 255, 0)       #  O's
 
 resolution = (640, 480)
 screen = pygame.display.set_mode(resolution)
 clock = pygame.time.Clock()
-
-
-running = True
-
+pygame.display.set_caption("Not-so-tic-tac-toe")
+font = pygame.font.Font(None, 74)
 
 # Setup 5x5 game board
 EMPTY = 0
@@ -37,16 +36,18 @@ current_board = [[None for _ in range(board_size)] for _ in range(board_size)] #
 cell_size = 100
 window_size = (cell_size * board_size, cell_size * board_size)
 
-screen = pygame.display.set_mode(window_size)
-pygame.display.set_mode("Not So Tic-Tac-Toe")
-font = pygame.font.Font(None, 74)
+
 
 player = "X"
 winner = None
 
 def board_drawing(): #This is to draw out the 5x5 TicTacToe Board
+    pass
+
 
 def game_winner(): #I'm going to call this function under CPU Opponent -
+    pass
+
 
 def cpu_opponent():
     global player
@@ -56,16 +57,24 @@ def cpu_opponent():
         column = random.choice(moves)
         current_board[row][column] = "O"
 
+def render_pass():
+    pass
+
+def update_pass():
+    pass
+
 
 def game_loop(): # Game's main loop
     running = True
     while running:
-
+        """ update section (we update everything in the game BEFORE rendering """
         # Go through pygame events
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 running = False
 
+        """ render section (we can now render all of our changes) """
+        screen.fill(dark_grey)
 
         pygame.display.flip()
         clock.tick(60)
