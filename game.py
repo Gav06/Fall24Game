@@ -15,7 +15,6 @@ pygame.init()
 
 white = (255, 255, 255)   #lines
 dark_grey = (90, 90, 90)  #background
-
 red = (255, 0, 0)         #  X's
 green = (0, 255, 0)       #  O's
 
@@ -30,11 +29,12 @@ EMPTY = 0
 CROSS = 1
 RING = 2
 
+width, height = 1000
 board_5x5 = 5
 board_size = board_5x5
 current_board = [[None for _ in range(board_size)] for _ in range(board_size)] # Had to look this one up
 cell_size = 100
-window_size = (cell_size * board_size, cell_size * board_size)
+window_size = (width, height)
 
 
 
@@ -45,13 +45,11 @@ cpu_wins = 0
 max_wins = 3
 
 def board_drawing(): #This is to draw out the 5x5 TicTacToe Board
+
     pass
 
 
 def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
-    global winner
-    for row in range(board_size):
-        if current_board
     pass
 
 """
