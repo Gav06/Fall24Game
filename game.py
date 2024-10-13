@@ -19,6 +19,9 @@ green = (0, 255, 0)       #  O's
 resolution = (640, 480)
 screen = pygame.display.set_mode(resolution)
 clock = pygame.time.Clock()
+
+font = pygame.font.Font(None, 74)
+
 running = True
 
 
@@ -27,7 +30,18 @@ EMPTY = 0
 CROSS = 1
 RING = 2
 
-board = [[EMPTY] * 5] * 5
+board_5x5 = 5
+board_size = board_5x5
+current_board =
+cell_size = 100
+window_size = (cell_size * board_size, cell_size * board_size)
+
+screen = pygame.display.set_mode(window_size)
+pygame.display.set_mode("Not So Tic-Tac-Toe")
+
+
+
+player = "X"
 
 def game_loop(): # Game's main loop
     running = True
@@ -41,6 +55,9 @@ def game_loop(): # Game's main loop
 
         pygame.display.flip()
         clock.tick(60)
+
+def cpu_opponent():
+
 
 
 game_loop()
