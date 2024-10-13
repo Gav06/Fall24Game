@@ -40,15 +40,21 @@ window_size = (cell_size * board_size, cell_size * board_size)
 
 player = "X"
 winner = None
+player_wins = 0
+cpu_wins = 0
+max_wins = 3
 
 def board_drawing(): #This is to draw out the 5x5 TicTacToe Board
     pass
 
 
-def game_winner(): #I'm going to call this function under CPU Opponent -
+def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
+    global winner
+    for row in range(board_size):
+        if current_board
     pass
 
-
+"""
 def cpu_opponent():
     global player
     moves = [(row, column) for row in range(board_size) for column in range(board_size) if not current_board[row][column]]
@@ -56,7 +62,7 @@ def cpu_opponent():
         row = random.choice(moves)
         column = random.choice(moves)
         current_board[row][column] = "O"
-
+"""
 def render_pass():
     pass
 
