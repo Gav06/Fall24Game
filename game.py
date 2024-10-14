@@ -71,7 +71,7 @@ def update_pass():
 def game_loop(): # Game's main loop
     running = True
     while running:
-        """ update section (we update everything in the game BEFORE rendering """
+        """ update section (we update everything in the game BEFORE rendering) """
         # Go through pygame events
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
