@@ -13,8 +13,9 @@ import pygame
 
 pygame.init()
 
-white = (255, 255, 255)   #lines
-dark_grey = (90, 90, 90)  #background
+white = (255, 255, 255)   # lines
+dark_grey = (40, 40, 40)  # background
+grey = (75, 75, 75)       # hover color
 red = (255, 0, 0)         #  X's
 green = (0, 255, 0)       #  O's
 
@@ -26,25 +27,75 @@ font = pygame.font.Font(None, 74)
 
 # Setup 5x5 game board
 EMPTY = 0
-CROSS = 1
-RING = 2
+CROSS = 1 # default for player
+RING = 2  # default for CPU
 
-width, height = 1000
-board_5x5 = 5
-board_size = board_5x5
+# We have a 5x5
+board_size = 5
+
 current_board = [[None for _ in range(board_size)] for _ in range(board_size)] # Had to look this one up
-cell_size = 100
-window_size = (width, height)
 
+# this is the RECT board, not used for game logic, but used for rendering and other stuff instead.
+# it starts off empty, we set it up later
+rect_board = [[None for h in range(board_size)] for k in range(board_size)]
 
-
-player = "X"
+# the size horizontally or vertically (because it's a square) of each cell
+cell_size = resolution[1] / board_size
+# is the PLAYER winning? t/f, None if still undecided
 winner = None
+# self-explanatory
 player_wins = 0
 cpu_wins = 0
+
 max_wins = 3
 
-def board_drawing(): #This is to draw out the 5x5 TicTacToe Board
+# this function is to set up the 2D array of Rects for rendering and stuff
+def setup_board():
+    for row in range(board_size):
+        for col in range(board_size):
+            rect_board[row][col] = pygame.Rect(cell_size * col, cell_size * row, cell_size, cell_size)
+
+    pass
+
+def draw_board(): #This is to draw out the 5x5 TicTacToe Board
+    line_length = resolution[1]
+    num_lines = board_size
+
+    # draw horizontal lines
+    for h in range(num_lines):
+        if h == 0 or h == num_lines:
+            continue
+        n = cell_size * h
+
+        pygame.draw.line(screen, white, (0, n), (line_length, n))
+        pygame.draw.line(screen, white, (n, 0), (n, line_length))
+
+"""
+Board Layout:
+
+(5 spaces, starts at 0, ends at 4, vertical and horizontal)
+
+visual:
+
+0 > 4
+v   v
+4 > 4,4
+"""
+
+# params: x coord of the mouse, y coord of the mouse
+# returns: a rect in a certain cell
+def get_board_space(x, y):
+    # check if the position given is out of bounds
+    edge = resolution[1]
+
+    if x <= 0 or x >= edge or y <= 0 or y >= edge:
+        return None
+
+    array_x = int(x // cell_size)
+    array_y = int(y // cell_size)
+    return rect_board[array_y][array_x]
+
+def draw_plays():
 
     pass
 
@@ -62,14 +113,33 @@ def cpu_opponent():
         current_board[row][column] = "O"
 """
 def render_pass():
-    pass
+    # rendering the outline
+    draw_board()
+
+    # draw the overlay when mousing over a cell
+    mouse_pos = pygame.mouse.get_pos()
+    pos = get_board_space(mouse_pos[0], mouse_pos[1])
+    if pos is not None:
+        s = pygame.Surface((pos.w - 1, pos.h - 1))
+        s.fill(grey)
+        screen.blit(s, (pos.x + 1, pos.y + 1))
+
+    # drawing the players' "Tics and tacs" lol
+    draw_plays()
+
+
+
 
 def update_pass():
-    pass
+    mouse_pos = pygame.mouse.get_pos()
 
 
 def game_loop(): # Game's main loop
     running = True
+
+    # fills our board array with all the rects
+    setup_board()
+
     while running:
         """ update section (we update everything in the game BEFORE rendering) """
         # Go through pygame events
@@ -77,14 +147,17 @@ def game_loop(): # Game's main loop
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 running = False
 
+        update_pass()
+
         """ render section (we can now render all of our changes) """
         screen.fill(dark_grey)
+        render_pass()
+
 
         pygame.display.flip()
         clock.tick(60)
 
 game_loop()
 pygame.quit()
-
 
 
