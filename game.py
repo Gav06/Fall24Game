@@ -134,7 +134,24 @@ def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
 
 # called when mouse is pressed
 
-def minimax():
+def minimax_algorithm(minimax): #This will be called to "cpu_opponent"
+    winner = game_winner()
+
+    if winner == CROSS:
+        return -1
+    elif winner == RING:
+        return 1
+    elif winner == "tie game":
+        return 0
+
+    if minimax:
+        best_score = -float("inf")
+        for row in range(board_size):
+            for col in range(board_size):
+                if game_board[row][col] == EMPTY:
+                    game_board[row][col] = RING
+
+def cpu_opponent():
 
 
 def handle_mouse(x, y):
@@ -153,17 +170,6 @@ def handle_mouse(x, y):
         game_board[row][col] = CROSS
     elif cell == CROSS:
         game_board[row][col] = EMPTY
-
-
-"""
-def cpu_opponent():
-    global player
-    moves = [(row, column) for row in range(board_size) for column in range(board_size) if not current_board[row][column]]
-    if moves:
-        row = random.choice(moves)
-        column = random.choice(moves)
-        current_board[row][column] = 
-"""
 
 def render_pass():
     # rendering the outline
