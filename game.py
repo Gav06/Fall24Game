@@ -7,8 +7,9 @@ Gavin Conley
 Trevor Williams
 Lucas Allen
 """
-import random
+
 import pygame
+import random
 
 white = (255, 255, 255)   # lines
 dark_grey = (40, 40, 40)  # background
@@ -112,9 +113,30 @@ def draw_plays():
 
 
 def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
-    pass
+    #Row check for  winner
+    for row in range(board_size):
+        if game_board[row][0] != EMPTY and all(game_board[row][col] == game_board[row][0]for col in range(board_size)):
+            return game_board[row][0]
+    #Column check for winner
+    for col in range(board_size):
+        if game_board[col][0] != EMPTY and all(game_board[row][col] == game_board[row][0] for row in range(board_size)):
+            return game_board[0][col]
+    #Diagnol Check
+    if game_board[0][0] != EMPTY and all(game_board[i][i] == game_board[0][0] for i in range(board_size)):
+        return game_board[0][0]
+    if game_board[0][board_size - 1] != EMPTY and all(game_board[i][board_size - 1 - i] == game_board[0][board_size - 1] for i in range(board_size)):
+        return game_board[0][board_size - 1]
+    #Tie Check
+    if all(game_board[row][col] != EMPTY for row in range(board_size) for col in range(board_size)):
+        return "tie game"
+
+    return None
 
 # called when mouse is pressed
+
+def minimax():
+
+
 def handle_mouse(x, y):
     target_space = get_board_space(x, y)
 
