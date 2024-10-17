@@ -8,7 +8,6 @@ Trevor Williams
 Lucas Allen
 """
 import random
-
 import pygame
 
 pygame.init()
@@ -83,7 +82,7 @@ v   v
 """
 
 # params: x coord of the mouse, y coord of the mouse
-# returns: a rect in a certain cell
+# returns: the row and column for the board array (numbers between 0 and 4)
 def get_board_space(x, y):
     # check if the position given is out of bounds
     edge = resolution[1]
@@ -91,9 +90,10 @@ def get_board_space(x, y):
     if x <= 0 or x >= edge or y <= 0 or y >= edge:
         return None
 
-    array_x = int(x // cell_size)
-    array_y = int(y // cell_size)
-    return rect_board[array_y][array_x]
+    row = int(y // cell_size)
+
+    col = int(x // cell_size)
+    return (row, col)
 
 def draw_plays():
 
@@ -116,13 +116,17 @@ def render_pass():
     # rendering the outline
     draw_board()
 
-    # draw the overlay when mousing over a cell
+    # get our mouse position
     mouse_pos = pygame.mouse.get_pos()
+    # see what square that winds up in (if any) check to make sure this value is not None
     pos = get_board_space(mouse_pos[0], mouse_pos[1])
+
+    # draw the overlay when mousing over a cell
     if pos is not None:
-        s = pygame.Surface((pos.w - 1, pos.h - 1))
+        r = rect_board[pos[0]][pos[1]]
+        s = pygame.Surface((r.w - 1, r.h - 1))
         s.fill(grey)
-        screen.blit(s, (pos.x + 1, pos.y + 1))
+        screen.blit(s, (r.x + 1, r.y + 1))
 
     # drawing the players' "Tics and tacs" lol
     draw_plays()
