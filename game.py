@@ -133,8 +133,44 @@ def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
     return None
 
 # called when mouse is pressed
+def board_evaluation():
+    winner = game_winner()
 
-def minimax():
+    if winner == CROSS:
+        return -10
+    elif winner == RING
+        return 10
+    elif winner == "tie game":
+        return 0
+
+    return None
+def minimax(depth, minimaxing):
+    score = board_evaluation()
+
+    if score is not None:
+        return score
+
+    if minimaxing:
+        best_score = -float("inf")
+        for row in range(board_size):
+            for col in range(board_size):
+                if game_board[row][col] == EMPTY:
+                    game_board[row][col] = RING
+                    score = minimax(depth + 1, False)
+                    game_board[row][col] = EMPTY
+                    best_score = max(score, best_score)
+        return best_score
+    else:
+        best_score = float("inf")
+        for row in range(board_size):
+            for col in range(board_size):
+                if game_board[row][col] == EMPTY:
+                    game_board[row][col] = CROSS
+                    score = minimax(depth + 1, True)
+                    game_board[row][col] = EMPTY
+                    best_score = min(score, best_score)
+        return best_score
+
 
 
 def handle_mouse(x, y):
