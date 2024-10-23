@@ -79,11 +79,11 @@ Board Layout:
 
 visual:
 
-0 > 4
-v   v
-4 > 4,4
+[0,0] -> [4,0]
+  |        |
+  v        v
+[0,4] -> [4,4]
 """
-
 # params: x coord of the mouse, y coord of the mouse
 # returns: the row and column for the board array (numbers between 0 and 4)
 def get_board_space(x, y):
@@ -103,13 +103,14 @@ def draw_plays():
         for col in range(board_size):
             cell_state = game_board[row][col]
 
-            if cell_state != CROSS:
-                continue
-
-            text = font.render("x", True, white)
-            cell_rect = rect_board[row][col]
-            screen.blit(text, (cell_rect.centerx, cell_rect.centery))
-    pass
+            if cell_state == CROSS:
+                text = font.render("x", True, white)
+                cell_rect = rect_board[row][col]
+                screen.blit(text, (cell_rect.centerx, cell_rect.centery))
+            elif cell_state == RING:
+                text = font.render("o", True, white)
+                cell_rect = rect_board[row][col]
+                screen.blit(text, (cell_rect.centerx, cell_rect.centery))
 
 
 def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
@@ -138,12 +139,14 @@ def board_evaluation():
 
     if winner == CROSS:
         return -10
-    elif winner == RING
+    elif winner == RING:
         return 10
     elif winner == "tie game":
         return 0
 
     return None
+
+
 def minimax(depth, minimaxing):
     score = board_evaluation()
 
@@ -186,9 +189,7 @@ def handle_mouse(x, y):
     cell = game_board[row][col]
 
     if cell == EMPTY:
-        game_board[row][col] = CROSS
-    elif cell == CROSS:
-        game_board[row][col] = EMPTY
+        game_board[row][col] = CROSS if pygame.mouse.get_pressed()[0] else RING
 
 
 """
