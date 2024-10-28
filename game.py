@@ -79,11 +79,11 @@ Board Layout:
 
 visual:
 
-[0,0] -> [4,0]
-  |        |
-  v        v
-[0,4] -> [4,4]
+0 > 4
+v   v
+4 > 4,4
 """
+
 # params: x coord of the mouse, y coord of the mouse
 # returns: the row and column for the board array (numbers between 0 and 4)
 def get_board_space(x, y):
@@ -102,16 +102,17 @@ def draw_plays():
     for row in range(board_size):
         for col in range(board_size):
             cell_state = game_board[row][col]
+            cell_rect = rect_board[row][col]
 
             if cell_state == CROSS:
-                text = font.render("x", True, white)
-                cell_rect = rect_board[row][col]
-                screen.blit(text, (cell_rect.centerx, cell_rect.centery))
+                text = font.render("x", True, red)
             elif cell_state == RING:
-                text = font.render("o", True, white)
-                cell_rect = rect_board[row][col]
-                screen.blit(text, (cell_rect.centerx, cell_rect.centery))
+                text = font.render("o", True, green)
+            else:
+                continue
 
+            text_rect = text.get_rect(center=cell_rect.center)
+            screen.blit(text, text_rect)
 
 def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
     #Row check for  winner
@@ -145,8 +146,6 @@ def board_evaluation():
         return 0
 
     return None
-
-
 def minimax(depth, minimaxing):
     score = board_evaluation()
 
@@ -175,6 +174,23 @@ def minimax(depth, minimaxing):
         return best_score
 
 
+def cpu_opponent():
+    best_score = -float('inf')
+    best_move = None
+
+    for row in range(board_size):
+        for col in range(board_size):
+            if game_board[row][col] == EMPTY:
+                game_board[row][col] = RING
+                score = minimax(0, False)
+                game_board[row][col] = EMPTY
+
+                if score > best_score:
+                    best_score = score
+                    best_move = (row, col)
+
+    if best_move is not None:
+        game_board[best_move[0]][best_move[1]] = RING
 
 def handle_mouse(x, y):
     target_space = get_board_space(x, y)
@@ -189,18 +205,10 @@ def handle_mouse(x, y):
     cell = game_board[row][col]
 
     if cell == EMPTY:
-        game_board[row][col] = CROSS if pygame.mouse.get_pressed()[0] else RING
+        game_board[row][col] = CROSS
+    elif cell == CROSS:
+        game_board[row][col] = EMPTY
 
-
-"""
-def cpu_opponent():
-    global player
-    moves = [(row, column) for row in range(board_size) for column in range(board_size) if not current_board[row][column]]
-    if moves:
-        row = random.choice(moves)
-        column = random.choice(moves)
-        current_board[row][column] = 
-"""
 
 def render_pass():
     # rendering the outline
