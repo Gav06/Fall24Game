@@ -43,6 +43,7 @@ screen = pygame.display.set_mode((width , height))
 clock = pygame.time.Clock()
 pygame.display.set_caption("")
 
+pygame.init()
 
 running = True
 while running:
@@ -66,12 +67,5 @@ while running:
     pygame.draw.rect(screen,(255,255,255), player)
     pygame.display.flip()
     clock.tick(60)
-
-pygame.init()
-
-
-
-
-
 
 pygame.quit()
