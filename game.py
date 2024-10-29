@@ -47,15 +47,10 @@ pygame.display.set_caption("")
 running = True
 while running:
     for event in pygame.event.get():
-<<<<<<< HEAD
-        if pygame.event == pygame.QUIT:
-            pygame.quit()
-=======
         if event.type == pygame.QUIT:
             running = False
             break
 
->>>>>>> 6fd3a00b1e348f2b5bd01039d3194df9b303fdf7
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_w] and player.top > 0:
