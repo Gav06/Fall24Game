@@ -59,7 +59,7 @@ def draw_main_menu():
     quarter_rect = pygame.Rect(0, height * 3 // 4, width, height // 4)
     pygame.draw.rect(screen, grass_green, quarter_rect)
     for i, (stars_x, stars_y) in enumerate(stars):
-        stars[i] = (stars_x - 1, stars_y)
+        stars[i] = (stars_x - 0.45, stars_y)
 
         if stars_x < 0:
             stars[i] = (width, random.randint(0, height * 3 // 4))
