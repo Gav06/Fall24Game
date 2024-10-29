@@ -4,12 +4,18 @@
 -
 -
 -
-
-
 -Have the player's character get more bloodied up and hurt as his health gets lower
 -have a cool main menu
 -have enemies be bigger and smaller cubes (for now)
 -point and click for shooting
 -possible power-ups when you kill brutes
+    -explosive bullets
+    -faster fire rate
+    -faster movement speed
 -8-bit style/pixel art
+-screen shake
+-crosshair instead of mouse cursor
+-
+-
+-
 -
