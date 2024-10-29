@@ -17,6 +17,7 @@ red = (255, 0, 0)         #  X's
 green = (0, 255, 0)       #  O's
 
 pygame.init()
+pygame.font.init()#initializes font so we can display the score
 
 resolution = (640, 480)
 screen = pygame.display.set_mode(resolution)
@@ -145,6 +146,7 @@ def game_loop(): # Game's main loop
         for event in events:
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 running = False
+
 
         update_pass(events)
 
