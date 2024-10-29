@@ -9,44 +9,53 @@ Lucas Allen
 """
 
 import pygame
-import random
 
+"""
+Color constants
+"""
 white = (255, 255, 255)   # lines
 dark_grey = (40, 40, 40)  # background
 grey = (75, 75, 75)       # hover color
 red = (255, 0, 0)         #  X's
 green = (0, 255, 0)       #  O's
 
+"""
+Pygame constant values
+"""
 pygame.init()
-
 resolution = (640, 480)
 screen = pygame.display.set_mode(resolution)
 clock = pygame.time.Clock()
 pygame.display.set_caption("Not-so-tic-tac-toe")
 font = pygame.font.Font(None, 28)
 
-# Setup 5x5 game board
+"""
+Integer constant values for determining who placed what on the board,
+and defining the board
+"""
 EMPTY = 0
 CROSS = 1 # default for player
 RING = 2  # default for CPU
-
-# We have a 5x5
 board_size = 5
-
 # This is the 2d array that stores if each cell is an X, O, or nothing.
 game_board = [[EMPTY for i in range(board_size)] for j in range(board_size)] # Had to look this one up
-
 # this is the RECT board, not used for game logic, but used for rendering and other stuff instead.
 # it starts off empty, we set it up later
 rect_board = [[None for h in range(board_size)] for k in range(board_size)]
-
 # the size horizontally or vertically (because it's a square) of each cell
 cell_size = resolution[1] / board_size
 
-# is the PLAYER winning? t/f, None if still undecided
+"""
+Boolean value for if the player wins,
+True if player win
+False if cpu win
+None if game is still ongoing
+"""
 winner = None
 
-# self-explanatory
+"""
+Keeping track of scores
+"""
 player_wins = 0
 cpu_wins = 0
 max_wins = 3
@@ -58,6 +67,7 @@ def setup_board():
             rect_board[row][col] = pygame.Rect(cell_size * col, cell_size * row, cell_size, cell_size)
 
     pass
+
 
 def draw_board(): #This is to draw out the 5x5 TicTacToe Board
     line_length = resolution[1]
@@ -79,9 +89,11 @@ Board Layout:
 
 visual:
 
-0 > 4
-v   v
-4 > 4,4
+0 ----- 4
+|       |
+|       |
+4 ----- 4,4
+
 """
 
 # params: x coord of the mouse, y coord of the mouse
@@ -98,6 +110,7 @@ def get_board_space(x, y):
     col = int(x // cell_size)
     return (row, col)
 
+
 def draw_plays():
     for row in range(board_size):
         for col in range(board_size):
@@ -113,6 +126,7 @@ def draw_plays():
 
             text_rect = text.get_rect(center=cell_rect.center)
             screen.blit(text, text_rect)
+
 
 def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
     #Row check for  winner
@@ -134,7 +148,7 @@ def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
 
     return None
 
-# called when mouse is pressed
+# checking the board each time a cell is placed
 def board_evaluation():
     winner = game_winner()
 
@@ -146,6 +160,8 @@ def board_evaluation():
         return 0
 
     return None
+
+
 def minimax(depth, minimaxing):
     score = board_evaluation()
 
@@ -192,6 +208,7 @@ def cpu_opponent():
     if best_move is not None:
         game_board[best_move[0]][best_move[1]] = RING
 
+# handle mouse input when the mouse is clicked
 def handle_mouse(x, y):
     target_space = get_board_space(x, y)
 
@@ -209,7 +226,7 @@ def handle_mouse(x, y):
     elif cell == CROSS:
         game_board[row][col] = EMPTY
 
-
+# rendering logic for each frame
 def render_pass():
     # rendering the outline
     draw_board()
@@ -239,7 +256,7 @@ def render_pass():
     screen.blit(p_score, (text_x, 30))
     screen.blit(cpu_score, (text_x, 50))
 
-
+# update logic for each frame
 def update_pass(events):
     # check for mouse click
     for event in events:
@@ -248,7 +265,7 @@ def update_pass(events):
 
     pass
 
-
+# called every single frame until game exits
 def game_loop(): # Game's main loop
     running = True
 
