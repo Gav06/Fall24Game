@@ -46,10 +46,7 @@ red = (255,0,0)
 
 font = pygame.font.Font(None, 60)
 screen = pygame.display.set_mode((width , height))
-<<<<<<< Updated upstream
 clock = pygame.time.Clock()
-pygame.display.set_caption("")
-=======
 pygame.display.set_caption("Zombie Shooter")
 
 
@@ -65,48 +62,18 @@ def draw_main_menu():
     screen.blit(start_text, start_rect)
 
     return start_rect
->>>>>>> Stashed changes
-
 
 running = True
 while running:
-    screen.fill(black)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-<<<<<<< Updated upstream
             break
-
-    keys = pygame.key.get_pressed()
-
-    if keys[pygame.K_w] and player.top > 0:
-        player.move_ip(0, -player_speed)
-    if keys[pygame.K_s] and player.bottom < 720:
-        player.move_ip(0, player_speed)
-    if keys[pygame.K_a] and player.left > 0:
-        player.move_ip(-player_speed, 0)
-    if keys[pygame.K_d] and player.right < 1280:
-        player.move_ip(player_speed, 0)
-
-    screen.fill((0,0,0))
-    pygame.draw.rect(screen,(255,255,255), player)
-    pygame.display.flip()
-    clock.tick(60)
-
-pygame.init()
-
-
-
-
-
-
-=======
 
         if menu and event.type == pygame.MOUSEBUTTONDOWN:
             start_button = draw_main_menu()
             if start_button.collidepoint(event.pos):
                 menu = False
-
     if menu:
         draw_main_menu()
     else:
@@ -125,5 +92,4 @@ pygame.init()
 
     pygame.display.flip()
     pygame.time.Clock().tick(60)
->>>>>>> Stashed changes
 pygame.quit()
