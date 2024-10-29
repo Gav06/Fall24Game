@@ -47,6 +47,7 @@ pygame.display.set_caption("")
 running = True
 while running:
     for event in pygame.event.get():
+
         if event.type == pygame.QUIT:
             running = False
             break
@@ -66,12 +67,5 @@ while running:
     pygame.draw.rect(screen,(255,255,255), player)
     pygame.display.flip()
     clock.tick(60)
-
-pygame.init()
-
-
-
-
-
 
 pygame.quit()
