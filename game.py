@@ -40,9 +40,9 @@ height = 720
 player_speed = 1
 player = pygame.Rect(width // 2 - 20 // 2, height // 2 - 20 // 2, 20, 20)
 
-black = (0,0,0)
+black = (0, 0, 0)
 white = (255, 255, 255)
-red = (255,0,0)
+red = (255, 0, 0)
 
 font = pygame.font.Font(None, 60)
 screen = pygame.display.set_mode((width , height))
@@ -53,7 +53,7 @@ pygame.display.set_caption("Zombie Shooter")
 menu = True
 def draw_main_menu():
     screen.fill(black)
-    title_text = font.render("Zombie Shooter", True, white)
+    title_text = font.render("Survive the Night", True, white)
     start_text = font.render("Start", True, red)
     title_rect = title_text.get_rect(center=(width // 2, height // 2 - 50))
     start_rect = start_text.get_rect(center=(width // 2, height // 2 + 50))
