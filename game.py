@@ -11,7 +11,7 @@ Lucas Allen
 
 import pygame
 from pygame import Surface
-
+import random
 import scene
 
 # Sets with a default surface of a
@@ -43,16 +43,33 @@ player = pygame.Rect(width // 2 - 20 // 2, height // 2 - 20 // 2, 20, 20)
 black = (0, 0, 0)
 white = (255, 255, 255)
 red = (255, 0, 0)
+grass_green = (60, 179, 113)
 
-font = pygame.font.Font(None, 60)
+font = pygame.font.Font("pokemonFont.ttf", 32)
 screen = pygame.display.set_mode((width , height))
 clock = pygame.time.Clock()
 pygame.display.set_caption("Zombie Shooter")
 
-
 menu = True
+num_stars = 50
+stars = [(random.randint(0, width), random.randint(0, height * 3 // 4)) for _ in range(num_stars)]
 def draw_main_menu():
     screen.fill(black)
+
+    quarter_rect = pygame.Rect(0, height * 3 // 4, width, height // 4)
+    pygame.draw.rect(screen, grass_green, quarter_rect)
+    for i, (stars_x, stars_y) in enumerate(stars):
+        stars[i] = (stars_x - 1, stars_y)
+
+        if stars_x < 0:
+            stars[i] = (width, random.randint(0, height * 3 // 4))
+
+        pygame.draw.circle(screen, white, stars[i], 2)  # Small white star
+    """for star in range(20):  # You can increase or decrease the number of stars
+        star_x = random.randint(0, width)
+        star_y = random.randint(0, height * 3 // 4)  # Only in the top 3/4
+        pygame.draw.circle(screen, white, (star_x, star_y), 2) """ # Small white star"""
+
     title_text = font.render("Survive the Night", True, white)
     start_text = font.render("Start", True, red)
     title_rect = title_text.get_rect(center=(width // 2, height // 2 - 50))
