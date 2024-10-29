@@ -33,9 +33,9 @@ font = pygame.font.Font(None, 28)
 Integer constant values for determining who placed what on the board,
 and defining the board
 """
-EMPTY = 0
-CROSS = 1 # default for player
-RING = 2  # default for CPU
+EMPTY = 0 # empty cell (blank)
+PLAYER = 1 # default for player (CROSS)
+CPU = 2  # default for CPU (RING)
 board_size = 5
 # This is the 2d array that stores if each cell is an X, O, or nothing.
 game_board = [[EMPTY for i in range(board_size)] for j in range(board_size)] # Had to look this one up
@@ -52,6 +52,8 @@ False if cpu win
 None if game is still ongoing
 """
 winner = None
+# Player starts first on the first level
+current_turn = PLAYER
 
 """
 Keeping track of scores
@@ -117,9 +119,9 @@ def draw_plays():
             cell_state = game_board[row][col]
             cell_rect = rect_board[row][col]
 
-            if cell_state == CROSS:
+            if cell_state == PLAYER:
                 text = font.render("x", True, red)
-            elif cell_state == RING:
+            elif cell_state == CPU:
                 text = font.render("o", True, green)
             else:
                 continue
@@ -152,9 +154,9 @@ def game_winner(): #I'm going to call this function under CPU Opponent -Trevor
 def board_evaluation():
     winner = game_winner()
 
-    if winner == CROSS:
+    if winner == PLAYER:
         return -10
-    elif winner == RING:
+    elif winner == CPU:
         return 10
     elif winner == "tie game":
         return 0
@@ -173,7 +175,7 @@ def minimax(depth, minimaxing):
         for row in range(board_size):
             for col in range(board_size):
                 if game_board[row][col] == EMPTY:
-                    game_board[row][col] = RING
+                    game_board[row][col] = CPU
                     score = minimax(depth + 1, False)
                     game_board[row][col] = EMPTY
                     best_score = max(score, best_score)
@@ -183,7 +185,7 @@ def minimax(depth, minimaxing):
         for row in range(board_size):
             for col in range(board_size):
                 if game_board[row][col] == EMPTY:
-                    game_board[row][col] = CROSS
+                    game_board[row][col] = PLAYER
                     score = minimax(depth + 1, True)
                     game_board[row][col] = EMPTY
                     best_score = min(score, best_score)
@@ -197,7 +199,7 @@ def cpu_opponent():
     for row in range(board_size):
         for col in range(board_size):
             if game_board[row][col] == EMPTY:
-                game_board[row][col] = RING
+                game_board[row][col] = CPU
                 score = minimax(0, False)
                 game_board[row][col] = EMPTY
 
@@ -206,10 +208,17 @@ def cpu_opponent():
                     best_move = (row, col)
 
     if best_move is not None:
-        game_board[best_move[0]][best_move[1]] = RING
+        game_board[best_move[0]][best_move[1]] = CPU
 
-# handle mouse input when the mouse is clicked
-def handle_mouse(x, y):
+# handle mouse input when the mouse is clicked (user input)
+def handle_player_input(x, y):
+    global current_turn
+
+    if current_turn != PLAYER:
+        return
+    else:
+        current_turn = CPU
+
     target_space = get_board_space(x, y)
 
     if target_space is None:
@@ -222,9 +231,13 @@ def handle_mouse(x, y):
     cell = game_board[row][col]
 
     if cell == EMPTY:
-        game_board[row][col] = CROSS
-    elif cell == CROSS:
+        game_board[row][col] = PLAYER
+    elif cell == PLAYER:
         game_board[row][col] = EMPTY
+
+# This gets called when it is the CPU's turn
+def handle_cpu_input():
+    pass
 
 # rendering logic for each frame
 def render_pass():
@@ -259,9 +272,12 @@ def render_pass():
 # update logic for each frame
 def update_pass(events):
     # check for mouse click
-    for event in events:
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            handle_mouse(event.pos[0], event.pos[1])
+    if current_turn == PLAYER:
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                handle_player_input(event.pos[0], event.pos[1])
+    else:
+        handle_cpu_input()
 
     pass
 
