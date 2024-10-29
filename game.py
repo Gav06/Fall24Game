@@ -25,11 +25,15 @@ screen = pygame.display.set_mode((width , height))
 pygame.display.set_caption("")
 
 
+pygame.init()
+
+
 running = True
 while running:
     for event in pygame.event.get():
         if pygame.event == pygame.QUIT:
-            pygame.quit()
+            running = False
+
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w] and player.top > 0:
         player.move_ip(0, -player_speed)
@@ -42,12 +46,5 @@ while running:
     screen.fill((0,0,0))
     pygame.draw.rect(screen,(255,255,255), player)
     pygame.display.flip()
-
-pygame.init()
-
-
-
-
-
 
 pygame.quit()
