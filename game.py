@@ -65,10 +65,6 @@ def draw_main_menu():
             stars[i] = (width, random.randint(0, height * 3 // 4))
 
         pygame.draw.circle(screen, white, stars[i], 2)  # Small white star
-    """for star in range(20):  # You can increase or decrease the number of stars
-        star_x = random.randint(0, width)
-        star_y = random.randint(0, height * 3 // 4)  # Only in the top 3/4
-        pygame.draw.circle(screen, white, (star_x, star_y), 2) """ # Small white star"""
 
     title_text = font.render("Survive the Night", True, white)
     start_text = font.render("Start", True, red)
