@@ -45,7 +45,7 @@ white = (255, 255, 255)
 red = (255, 0, 0)
 grass_green = (60, 179, 113)
 
-font = pygame.font.Font("pokemonFont.ttf", 32)
+font = pygame.font.Font("assets/pokemonFont.ttf", 32)
 screen = pygame.display.set_mode((width , height))
 clock = pygame.time.Clock()
 pygame.display.set_caption("Zombie Shooter")
