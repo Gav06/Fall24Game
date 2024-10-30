@@ -39,7 +39,6 @@ clock = pygame.time.Clock()
 
 # Current scene being updated and rendered, main menu by default
 
-
 # Starts with a plain white surface
 class GameObject:
     # Uses a default surface which is just filled as white
@@ -182,7 +181,6 @@ def update_pass():
             running = False
 
     current_scene.update_scene(events, keys)
-
 
 def game_init():
     pygame.display.set_caption("Zombie Shooter")
