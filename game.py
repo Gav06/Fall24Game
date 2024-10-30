@@ -14,6 +14,7 @@ from pygame import Surface
 import random
 import scene
 
+
 # Sets with a default surface of a
 class GameObject:
     # Uses a default surface which is just filled as white
@@ -38,7 +39,7 @@ MAIN_MENU = scene.MainMenu()
 WIDTH = 1280
 HEIGHT = 720
 PLAYER_SPEED = 5
-player_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
+
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -49,6 +50,7 @@ font = pygame.font.Font("assets/pokemonFont.ttf", 32)
 screen = pygame.display.set_mode((WIDTH , HEIGHT))
 clock = pygame.time.Clock()
 pygame.display.set_caption("Zombie Shooter")
+player = pygame.image.load("CharacterIdle.png").convert_alpha()
 
 menu = True
 num_stars = 50
@@ -91,17 +93,17 @@ while running:
         draw_main_menu()
     else:
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_w] and player_rect.top > 0:
-            player_rect.move_ip(0, -PLAYER_SPEED)
-        if keys[pygame.K_s] and player_rect.bottom < HEIGHT:
-            player_rect.move_ip(0, PLAYER_SPEED)
-        if keys[pygame.K_a] and player_rect.left > 0:
-            player_rect.move_ip(-PLAYER_SPEED, 0)
-        if keys[pygame.K_d] and player_rect.right < WIDTH:
-            player_rect.move_ip(PLAYER_SPEED, 0)
+        if keys[pygame.K_w] and player.top > 0:
+            player.move_ip(0, -PLAYER_SPEED)
+        if keys[pygame.K_s] and player.bottom < HEIGHT:
+            player.move_ip(0, PLAYER_SPEED)
+        if keys[pygame.K_a] and player.left > 0:
+            player.move_ip(-PLAYER_SPEED, 0)
+        if keys[pygame.K_d] and player.right < WIDTH:
+            player.move_ip(PLAYER_SPEED, 0)
 
         screen.fill(BLACK)
-        pygame.draw.rect(screen, WHITE, player_rect)
+        screen.blit(player, (player.x, player.y))
 
     pygame.display.flip()
     pygame.time.Clock().tick(60)
