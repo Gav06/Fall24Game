@@ -57,7 +57,7 @@ class GameObject:
 # Our class for each scene.
 # The abstract methods are just methods that we will define in subclasses, at a later time
 class Scene:
-    # Empty list of GameObject instancess
+    # Empty list of GameObject instances
     game_objects = []
 
     def __init__(self, name):
