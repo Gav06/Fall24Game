@@ -31,7 +31,7 @@ pygame.init()
 FONT = pygame.font.Font("assets/pokemonFont.ttf", 32)
 
 # will be removed once gameObjects are finished
-player = pygame.image.load("CharldleRight.png").convert_alpha
+player = pygame.image.load("assets/CharldleRight.png").convert_alpha()
 
 # Pygame constants
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
