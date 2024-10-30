@@ -31,7 +31,7 @@ pygame.init()
 FONT = pygame.font.Font("assets/pokemonFont.ttf", 32)
 
 # will be removed once gameObjects are finished
-player_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
+player = pygame.image.load("CharIdleRight.png").convert_alpha
 
 # Pygame constants
 screen = pygame.display.set_mode((WIDTH , HEIGHT))
@@ -134,14 +134,14 @@ class World(Scene, ABC):
         display_screen.blit(self.player_surface, (self.player_rect.x, self.player_rect.y))
 
     def update_scene(self, events, keys):
-        if keys[pygame.K_w] and self.player_rect.top > 0:
-            self.player_rect.move_ip(0, -PLAYER_SPEED)
-        if keys[pygame.K_s] and self.player_rect.bottom < HEIGHT:
-            self.player_rect.move_ip(0, PLAYER_SPEED)
-        if keys[pygame.K_a] and self.player_rect.left > 0:
-            self.player_rect.move_ip(-PLAYER_SPEED, 0)
-        if keys[pygame.K_d] and self.player_rect.right < WIDTH:
-            self.player_rect.move_ip(PLAYER_SPEED, 0)
+        if keys[pygame.K_w] and self.player.top > 0:
+            self.player.move_ip(0, -PLAYER_SPEED)
+        if keys[pygame.K_s] and self.player.bottom < HEIGHT:
+            self.player.move_ip(0, PLAYER_SPEED)
+        if keys[pygame.K_a] and self.player.left > 0:
+            self.player.move_ip(-PLAYER_SPEED, 0)
+        if keys[pygame.K_d] and self.player.right < WIDTH:
+            self.player.move_ip(PLAYER_SPEED, 0)
 
 """ End World """
 
