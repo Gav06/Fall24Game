@@ -30,9 +30,6 @@ GRASS_GREEN = (60, 179, 113)
 pygame.init()
 FONT = pygame.font.Font("assets/pokemonFont.ttf", 32)
 
-# will be removed once gameObjects are finished
-player = pygame.image.load("assets/CharldleRight.png").convert_alpha()
-
 # Pygame constants
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -119,17 +116,18 @@ class MainMenu(Scene, ABC):
 """ Begin World """
 
 class World(Scene, ABC):
-    player_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
 
-    player_surface = pygame.Surface((player_rect.w, player_rect.h))
-    player_surface.fill(WHITE)
 
     def __init__(self):
         super().__init__("world")
+        self.player_tex = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
+        self.player_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
+
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
-        display_screen.blit(self.player_surface, (self.player_rect.x, self.player_rect.y))
+        display_screen.blit(self.player_tex, (self.player_rect.x, self.player_rect.y))
+
 
     def update_scene(self, events, keys):
         if keys[pygame.K_w] and self.player_rect.top > 0:
