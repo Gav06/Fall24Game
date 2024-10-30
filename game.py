@@ -1,5 +1,5 @@
 """
-Game Rewrite
+Game Rewrite (Began October 29th, 2024)
 
 Authors:
 
@@ -36,8 +36,6 @@ player = pygame.image.load("CharIdleRight.png").convert_alpha
 # Pygame constants
 screen = pygame.display.set_mode((WIDTH , HEIGHT))
 clock = pygame.time.Clock()
-
-# Current scene being updated and rendered, main menu by default
 
 # Starts with a plain white surface
 class GameObject:
@@ -184,7 +182,6 @@ def update_pass():
 
 def game_init():
     pygame.display.set_caption("Zombie Shooter")
-
 
 
 def game_loop():
