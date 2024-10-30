@@ -9,17 +9,43 @@ Lucas Allen
 
 """
 
+from abc import abstractmethod, ABC
 import pygame
-from pygame import Surface
 import random
-import scene
 
-# Sets with a default surface of a
+# Init pygame lib
+pygame.init()
+# Constant values (never change)
+# Usually denoted in ALL CAPS
+WIDTH = 1280
+HEIGHT = 720
+
+PLAYER_SPEED = 5
+# Colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+GRASS_GREEN = (60, 179, 113)
+# Init pygame and our font
+pygame.init()
+FONT = pygame.font.Font("assets/pokemonFont.ttf", 32)
+
+# will be removed once gameObjects are finished
+player_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
+
+# Pygame constants
+screen = pygame.display.set_mode((WIDTH , HEIGHT))
+clock = pygame.time.Clock()
+
+# Current scene being updated and rendered, main menu by default
+
+
+# Starts with a plain white surface
 class GameObject:
     # Uses a default surface which is just filled as white
     def __init__(self, rect):
         self.rect = rect
-        self.surface = Surface((rect.w, rect.h))
+        self.surface = pygame.Surface((rect.w, rect.h))
         self.surface.fill((255, 255, 255))
 
     # "target" parameter is going to be the screen, or whatever surface we will blit onto
@@ -30,79 +56,156 @@ class GameObject:
     def update(self, events):
         pass
 
-pygame.init()
 
-# Constant values (never change)
-# Usually denoted in ALL CAPS
-MAIN_MENU = scene.MainMenu()
-WIDTH = 1280
-HEIGHT = 720
-PLAYER_SPEED = 5
-player_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
-# Colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-RED = (255, 0, 0)
-GRASS_GREEN = (60, 179, 113)
+# Our class for each scene.
+# The abstract methods are just methods that we will define in subclasses, at a later time
+class Scene:
+    # Empty list of GameObject classes
+    game_objects = []
 
-font = pygame.font.Font("assets/pokemonFont.ttf", 32)
-screen = pygame.display.set_mode((WIDTH , HEIGHT))
-clock = pygame.time.Clock()
-pygame.display.set_caption("Zombie Shooter")
+    def __init__(self, name):
+        self.name = name
 
-menu = True
-num_stars = 50
-stars = [(random.randint(0, WIDTH), random.randint(0, HEIGHT * 3 // 4)) for _ in range(num_stars)]
-def draw_main_menu():
-    screen.fill(BLACK)
+    @abstractmethod
+    def draw_scene(self, display_screen):
+        pass
 
-    quarter_rect = pygame.Rect(0, HEIGHT * 3 // 4, WIDTH, HEIGHT // 4)
-    pygame.draw.rect(screen, GRASS_GREEN, quarter_rect)
-    for i, (stars_x, stars_y) in enumerate(stars):
-        stars[i] = (stars_x - 0.45, stars_y)
 
-        if stars_x < 0:
-            stars[i] = (WIDTH, random.randint(0, HEIGHT * 3 // 4))
+    @abstractmethod
+    def update_scene(self, events, keys):
+        pass
 
-        pygame.draw.circle(screen, WHITE, stars[i], 2)  # Small white star
+""" Begin Main Menu """
 
-    title_text = font.render("Survive the Night", True, WHITE)
-    start_text = font.render("Start", True, RED)
+class MainMenu(Scene, ABC):
+
+    star_count = 50
+    star_list = [(random.randint(0, WIDTH), random.randint(0, HEIGHT * 3 // 4)) for _ in range(star_count)]
+
+    title_text = FONT.render("Survive the Night", True, WHITE)
     title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+
+    start_text = FONT.render("Start", True, RED)
     start_rect = start_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
 
-    screen.blit(title_text, title_rect)
-    screen.blit(start_text, start_rect)
+    def __init__(self):
+        super().__init__("menu")
 
-    return start_rect
+
+    def draw_scene(self, display_screen):
+        display_screen.fill(BLACK)
+
+        quarter_rect = pygame.Rect(0, HEIGHT * 3 // 4, WIDTH, HEIGHT // 4)
+        pygame.draw.rect(display_screen, GRASS_GREEN, quarter_rect)
+
+        for i, (stars_x, stars_y) in enumerate(self.star_list):
+            self.star_list[i] = (stars_x - 0.45, stars_y)
+
+            if stars_x < 0:
+                self.star_list[i] = (WIDTH, random.randint(0, HEIGHT * 3 // 4))
+
+            pygame.draw.circle(display_screen, WHITE, self.star_list[i], 2)  # Small white star
+
+        display_screen.blit(self.title_text, self.title_rect)
+        display_screen.blit(self.start_text, self.start_rect)
+
+
+    def update_scene(self, events, keys):
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.start_rect.collidepoint(event.pos):
+                    # Switch to level
+                    change_scene("world")
+
+""" End Main Menu """
+
+""" Begin World """
+
+class World(Scene, ABC):
+    player_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
+
+    player_surface = pygame.Surface((player_rect.w, player_rect.h))
+    player_surface.fill(WHITE)
+
+    def __init__(self):
+        super().__init__("world")
+
+    def draw_scene(self, display_screen):
+        display_screen.fill(BLACK)
+        display_screen.blit(self.player_surface, (self.player_rect.x, self.player_rect.y))
+
+    def update_scene(self, events, keys):
+        if keys[pygame.K_w] and self.player_rect.top > 0:
+            self.player_rect.move_ip(0, -PLAYER_SPEED)
+        if keys[pygame.K_s] and self.player_rect.bottom < HEIGHT:
+            self.player_rect.move_ip(0, PLAYER_SPEED)
+        if keys[pygame.K_a] and self.player_rect.left > 0:
+            self.player_rect.move_ip(-PLAYER_SPEED, 0)
+        if keys[pygame.K_d] and self.player_rect.right < WIDTH:
+            self.player_rect.move_ip(PLAYER_SPEED, 0)
+
+""" End World """
+
+# This Section is for game scenes and variables, not stuff needed explicitly in each level or in the gameplay itself
+MAIN_MENU = MainMenu()  # "menu"
+WORLD = World()         # "world"
+# DEATH = Death()       # "death"
+# death state not added yet lol
+
+scenes = {
+    MAIN_MENU.name: MAIN_MENU,
+    WORLD.name: WORLD
+    # DEATH.name: DEATH
+}
+
 
 running = True
-while running:
-    for event in pygame.event.get():
+# Our scene is Main menu by default
+current_scene = scenes["menu"]
+
+def change_scene(scene_name):
+    global current_scene
+    current_scene = scenes[scene_name]
+
+def render_pass(display_screen):
+    current_scene.draw_scene(display_screen)
+
+
+def update_pass():
+    global running
+
+    events = pygame.event.get()
+    keys = pygame.key.get_pressed()
+
+    for event in events:
         if event.type == pygame.QUIT:
             running = False
-            break
 
-        if menu and event.type == pygame.MOUSEBUTTONDOWN:
-            start_button = draw_main_menu()
-            if start_button.collidepoint(event.pos):
-                menu = False
-    if menu:
-        draw_main_menu()
-    else:
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w] and player_rect.top > 0:
-            player_rect.move_ip(0, -PLAYER_SPEED)
-        if keys[pygame.K_s] and player_rect.bottom < HEIGHT:
-            player_rect.move_ip(0, PLAYER_SPEED)
-        if keys[pygame.K_a] and player_rect.left > 0:
-            player_rect.move_ip(-PLAYER_SPEED, 0)
-        if keys[pygame.K_d] and player_rect.right < WIDTH:
-            player_rect.move_ip(PLAYER_SPEED, 0)
+    current_scene.update_scene(events, keys)
 
-        screen.fill(BLACK)
-        pygame.draw.rect(screen, WHITE, player_rect)
 
-    pygame.display.flip()
-    pygame.time.Clock().tick(60)
-pygame.quit()
+def game_init():
+    pygame.display.set_caption("Zombie Shooter")
+
+
+
+def game_loop():
+    global running
+
+    while running:
+        # Updates
+        update_pass()
+        render_pass(screen)
+
+        pygame.display.flip()
+        pygame.time.Clock().tick(60)
+
+
+def __main__():
+    game_init()
+    game_loop()
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    __main__()
