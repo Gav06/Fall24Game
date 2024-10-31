@@ -23,6 +23,7 @@ WIDTH = 1280
 HEIGHT = 720
 
 PLAYER_SPEED = 5
+BULLET_SPEED = 20
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -41,6 +42,8 @@ class GameObject:
     def __init__(self, rect, surf):
         self.rect = rect
         self.surface = surf
+        # the "dead" variable tells the game whether or not this gameObject should be deleted
+        self.dead = False
 
     # "target" parameter is going to be the screen, or whatever surface we will blit onto
     def render(self, display_screen):
@@ -68,19 +71,67 @@ class Player(GameObject, ABC):
 
 
     def update(self, events, keys):
+        # Player move input
+        dx = 0
+        dy = 0
+
         if keys[pygame.K_w] and self.rect.top > 0:
-            self.rect.move_ip(0, -PLAYER_SPEED)
+            dy = -PLAYER_SPEED
         if keys[pygame.K_s] and self.rect.bottom < HEIGHT:
-            self.rect.move_ip(0, PLAYER_SPEED)
+            dy = PLAYER_SPEED
         if keys[pygame.K_a] and self.rect.left > 0:
-            self.rect.move_ip(-PLAYER_SPEED, 0)
+            dx = -PLAYER_SPEED
         if keys[pygame.K_d] and self.rect.right < WIDTH:
-            self.rect.move_ip(PLAYER_SPEED, 0)
+            dx = PLAYER_SPEED
+
+        self.rect.move_ip(dx, dy)
+
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                screen_pos = event.pos
+                self.shoot(screen_pos[0], screen_pos[1])
+
+
+    # Fires a projectile with the current load-out towards the current position
+    def shoot(self, x, y):
+
+        player_x = self.rect.centerx
+        player_y = self.rect.centery
+
+        delta_x = x - player_x
+        delta_y = y - player_y
+
+        motion_x = (BULLET_SPEED * delta_x) / 100
+        motion_y = (BULLET_SPEED * delta_y) / 100
+
+        current_scene.game_objects.append(Bullet(player_x, player_y, motion_x, motion_y))
+
+
+class Bullet(GameObject, ABC):
+    def __init__(self, x, y, motion_x, motion_y):
+        z_rect = pygame.Rect(x, y, 5, 5)
+        z_surf = pygame.Surface(z_rect.size)
+        z_surf.fill((255, 255, 0))
+        super().__init__(z_rect, z_surf)
+
+        self.motion_x = motion_x
+        self.motion_y = motion_y
+
+
+    def render(self, display_screen):
+        super().render(display_screen)
+
+    def update(self, events, key):
+        self.rect.move_ip(self.motion_x, self.motion_y)
+
+        if not is_within_bonuds(self.rect.x, self.rect.y):
+            self.dead = True
+            return
 
 
 class Zombie(GameObject, ABC):
 
-    movement_speed = 1
+    movement_speed = 3.5
 
     def __init__(self):
         z_rect = pygame.Rect(0, 0, 20, 20)
@@ -98,6 +149,7 @@ class Zombie(GameObject, ABC):
             return
 
         player = current_scene.player
+
         zx = self.rect.x
         zy = self.rect.y
 
@@ -113,12 +165,17 @@ class Zombie(GameObject, ABC):
         # if player is to the right
         elif px > zx:
             dx *= 1
+        else:
+            dx = 0
 
         # if player is above us
         if py < zy:
             dy *= -1
+        # if player is below
         elif py > zy:
             dy *= 1
+        else:
+            dy = 0
 
         self.rect.move_ip(dx, dy)
 
@@ -237,11 +294,17 @@ class World(Scene, ABC):
             obj.render(display_screen)
 
 
+
     def update_scene(self, events, keys):
         self.player.update(events, keys)
 
         for obj in self.game_objects:
             obj.update(events, keys)
+
+        # Re-setting the list to one without all the dead gameObjects
+        # (cleanup of out-of-bounds bullets and dead zombies)
+        self.game_objects = [obj for obj in self.game_objects if not obj.dead]
+
 
 
 """ End World """
@@ -262,6 +325,9 @@ scenes = {
 running = True
 # Our scene is Main menu by default
 current_scene = scenes["menu"]
+
+def is_within_bonuds(x, y):
+    return 0 < x < WIDTH and 0 < y < HEIGHT
 
 def change_scene(scene_name):
     global current_scene
