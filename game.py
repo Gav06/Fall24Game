@@ -148,6 +148,17 @@ class MainMenu(Scene, ABC):
     star_count = 50
     star_list = [(random.randint(0, WIDTH), random.randint(0, HEIGHT * 3 // 4)) for _ in range(star_count)]
 
+    square1 = pygame.Rect(100, HEIGHT * 6 // 8, 50, 70)
+    square2 = pygame.Rect(100, HEIGHT * 6 // 8, 50, 70)
+    square_distance = 90
+    square_speed = 2
+    chasing = True
+
+    square1_img = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
+    square1_img = pygame.transform.scale(square1_img, (square1.width, square1.height))
+    square2_img = pygame.image.load("assets/Zombie_One.png").convert_alpha()
+    square2_img = pygame.transform.scale(square2_img, (square2.width, square2.height))
+
     title_text = FONT.render("Survive the Night", True, WHITE)
     title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
 
@@ -172,8 +183,30 @@ class MainMenu(Scene, ABC):
 
             pygame.draw.circle(display_screen, WHITE, self.star_list[i], 2)  # Small white star
 
+        self.chasing_images()
+        display_screen.blit(self.square1_img, self.square1)
+        display_screen.blit(self.square2_img, self.square2)
+
+        #pygame.draw.rect(display_screen, WHITE, self.square1)
+        #pygame.draw.rect(display_screen, WHITE, self.square2)
+
         display_screen.blit(self.title_text, self.title_rect)
         display_screen.blit(self.start_text, self.start_rect)
+
+    def chasing_images(self):
+        if self.chasing:
+            self.square1.x -= self.square_speed
+            self.square2.x = self.square1.x + self.square_distance
+
+            if self.square2.x < -self.square_distance:
+                self.chasing = False
+        else:
+            self.square1.x += self.square_speed
+            self.square2.x += self.square1.x - self.square_speed
+
+            if self.square1.x > WIDTH:
+                self.chasing = True
+
 
 
     def update_scene(self, events, keys):
