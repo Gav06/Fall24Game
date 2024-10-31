@@ -148,8 +148,8 @@ class MainMenu(Scene, ABC):
     star_count = 50
     star_list = [(random.randint(0, WIDTH), random.randint(0, HEIGHT * 3 // 4)) for _ in range(star_count)]
 
-    square1 = pygame.Rect(100, HEIGHT * 6 // 8, 50, 70)
-    square2 = pygame.Rect(100, HEIGHT * 6 // 8, 50, 70)
+    square1 = pygame.Rect(100, HEIGHT * 6 // 8, 70, 90)
+    square2 = pygame.Rect(100, HEIGHT * 6 // 8, 70, 90)
     square_distance = 90
     square_speed = 2
     chasing = True
@@ -181,14 +181,15 @@ class MainMenu(Scene, ABC):
             if stars_x < 0:
                 self.star_list[i] = (WIDTH, random.randint(0, HEIGHT * 3 // 4))
 
-            pygame.draw.circle(display_screen, WHITE, self.star_list[i], 2)  # Small white star
+            pygame.draw.circle(display_screen, WHITE, self.star_list[i], 2)
+
+        display_screen.blit(self.square2_img, self.square2)
+
+        display_screen.blit(self.square2_img, self.square2)
 
         self.chasing_images()
         display_screen.blit(self.square1_img, self.square1)
         display_screen.blit(self.square2_img, self.square2)
-
-        #pygame.draw.rect(display_screen, WHITE, self.square1)
-        #pygame.draw.rect(display_screen, WHITE, self.square2)
 
         display_screen.blit(self.title_text, self.title_rect)
         display_screen.blit(self.start_text, self.start_rect)
@@ -202,7 +203,7 @@ class MainMenu(Scene, ABC):
                 self.chasing = False
         else:
             self.square1.x += self.square_speed
-            self.square2.x += self.square1.x - self.square_speed
+            self.square2.x = self.square1.x - self.square_distance
 
             if self.square1.x > WIDTH:
                 self.chasing = True
