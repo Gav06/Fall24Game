@@ -13,6 +13,8 @@ from abc import abstractmethod, ABC
 import pygame
 import random
 
+from pygame import Surface
+
 # Init pygame lib
 pygame.init()
 # Constant values (never change)
@@ -36,19 +38,89 @@ clock = pygame.time.Clock()
 
 # Starts with a plain white surface
 class GameObject:
-    # Uses a default surface which is just filled as white
-    def __init__(self, rect):
+    def __init__(self, rect, surf):
         self.rect = rect
-        self.surface = pygame.Surface((rect.w, rect.h))
-        self.surface.fill((255, 255, 255))
+        self.surface = surf
 
     # "target" parameter is going to be the screen, or whatever surface we will blit onto
-    def render(self, target):
-        target.blit(self.surface, (self.rect.x, self.rect.y))
+    def render(self, display_screen):
+        display_screen.blit(self.surface, (self.rect.x, self.rect.y))
 
     # "events" parameter is the event list from the pygame loop
-    def update(self, events):
+    @abstractmethod
+    def update(self, events, keys):
         pass
+
+
+class Player(GameObject, ABC):
+    def __init__(self):
+        p_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
+        p_surf = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
+        super().__init__(p_rect, p_surf)
+
+
+    def render(self, display_screen):
+        debug_surface = pygame.Surface((self.rect.w, self.rect.h))
+        debug_surface.fill(WHITE)
+        display_screen.blit(debug_surface, self.rect.topleft)
+        # temporarily disabled that until we fix the textures
+        #super().render(display_screen)
+
+
+    def update(self, events, keys):
+        if keys[pygame.K_w] and self.rect.top > 0:
+            self.rect.move_ip(0, -PLAYER_SPEED)
+        if keys[pygame.K_s] and self.rect.bottom < HEIGHT:
+            self.rect.move_ip(0, PLAYER_SPEED)
+        if keys[pygame.K_a] and self.rect.left > 0:
+            self.rect.move_ip(-PLAYER_SPEED, 0)
+        if keys[pygame.K_d] and self.rect.right < WIDTH:
+            self.rect.move_ip(PLAYER_SPEED, 0)
+
+
+class Zombie(GameObject, ABC):
+
+    movement_speed = 1
+
+    def __init__(self):
+        z_rect = pygame.Rect(0, 0, 20, 20)
+        z_surf = Surface(z_rect.size)
+        z_surf.fill((32, 255, 32))
+        super().__init__(z_rect, z_surf)
+
+
+    def render(self, display_screen):
+        super().render(display_screen)
+
+
+    def update(self, events, keys):
+        if type(current_scene) is not World:
+            return
+
+        player = current_scene.player
+        zx = self.rect.x
+        zy = self.rect.y
+
+        px = player.rect.x
+        py = player.rect.y
+
+        dx = self.movement_speed
+        dy = self.movement_speed
+
+        # if player is to the left of us
+        if px < zx:
+            dx *= -1
+        # if player is to the right
+        elif px > zx:
+            dx *= 1
+
+        # if player is above us
+        if py < zy:
+            dy *= -1
+        elif py > zy:
+            dy *= 1
+
+        self.rect.move_ip(dx, dy)
 
 
 # Our class for each scene.
@@ -117,27 +189,26 @@ class MainMenu(Scene, ABC):
 
 class World(Scene, ABC):
 
-
     def __init__(self):
         super().__init__("world")
-        self.player_tex = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
-        self.player_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
+        self.player = Player()
+        self.game_objects.append(Zombie())
 
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
-        display_screen.blit(self.player_tex, (self.player_rect.x, self.player_rect.y))
+        self.player.render(display_screen)
+
+        for obj in self.game_objects:
+            obj.render(display_screen)
 
 
     def update_scene(self, events, keys):
-        if keys[pygame.K_w] and self.player_rect.top > 0:
-            self.player_rect.move_ip(0, -PLAYER_SPEED)
-        if keys[pygame.K_s] and self.player_rect.bottom < HEIGHT:
-            self.player_rect.move_ip(0, PLAYER_SPEED)
-        if keys[pygame.K_a] and self.player_rect.left > 0:
-            self.player_rect.move_ip(-PLAYER_SPEED, 0)
-        if keys[pygame.K_d] and self.player_rect.right < WIDTH:
-            self.player_rect.move_ip(PLAYER_SPEED, 0)
+        self.player.update(events, keys)
+
+        for obj in self.game_objects:
+            obj.update(events, keys)
+
 
 """ End World """
 
