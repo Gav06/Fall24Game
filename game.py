@@ -15,8 +15,6 @@ import pygame
 import random
 import math
 
-from pygame import Surface
-
 # Init pygame lib
 pygame.init()
 # Constant values (never change)
@@ -143,19 +141,19 @@ class Player(GameObject, ABC):
     # Fires a projectile with the current load-out towards the current position
     def shoot(self, x, y):
 
-        player_x = self.rect.centerx
-        player_y = self.rect.centery
+        px = self.rect.centerx
+        py = self.rect.centery
 
-        delta_x = x - player_x
-        delta_y = y - player_y
+        dx = x - px
+        dy = y - py
 
-        straight = math.sqrt(delta_x**2 + delta_y**2)
+        h = math.sqrt(dx**2 + dy**2)
 
-        motion_x = (delta_x / straight) * BULLET_SPEED
-        motion_y = (delta_y / straight) * BULLET_SPEED
+        mx = (dx / h) * BULLET_SPEED
+        my = (dy / h) * BULLET_SPEED
 
         pygame.mixer.Sound.play(SOUND_SHOOT, 0)
-        current_scene.game_objects.append(Bullet(player_x, player_y, motion_x, motion_y))
+        current_scene.game_objects.append(Bullet(px, py, mx, my))
 
 
     def on_death(self):
@@ -164,10 +162,10 @@ class Player(GameObject, ABC):
 
 class Bullet(GameObject, ABC):
     def __init__(self, x, y, motion_x, motion_y):
-        z_rect = pygame.Rect(x, y, 5, 5)
-        z_surf = pygame.Surface(z_rect.size)
-        z_surf.fill((255, 255, 0))
-        super().__init__(z_rect, z_surf, TAG_BULLET)
+        b_rect = pygame.Rect(x, y, 5, 5)
+        b_surf = pygame.Surface(b_rect.size)
+        b_surf.fill((255, 255, 0))
+        super().__init__(b_rect, b_surf, TAG_BULLET)
 
         self.motion_x = motion_x
         self.motion_y = motion_y
@@ -207,7 +205,7 @@ class Zombie(GameObject, ABC):
 
     def __init__(self):
         z_rect = pygame.Rect(0, 0, 20, 20)
-        z_surf = Surface(z_rect.size)
+        z_surf = pygame.Surface(z_rect.size)
         z_surf.fill((32, 255, 32))
 
         super().__init__(z_rect, z_surf, TAG_ZOMBIE)
