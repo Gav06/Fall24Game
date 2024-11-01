@@ -35,13 +35,40 @@ GRASS_GREEN = (60, 179, 113)
 pygame.init()
 FONT = pygame.font.Font("assets/pokemonFont.ttf", 32)
 
+# Sound effects
+SOUND_SHOOT = pygame.mixer.Sound("assets/shoot2.wav")
+SOUND_DEATH = pygame.mixer.Sound("assets/death.wav")
+SOUND_HURT = pygame.mixer.Sound("assets/hurt.wav")
+
+TAG_PLAYER = "player"
+TAG_ZOMBIE = "zombie"
+TAG_BULLET = "bullet"
+
 # Pygame constants
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
+# Used for animations and stuff
+class Stopwatch:
+
+    current_ms = 0
+
+    def start(self):
+        self.reset()
+
+
+    def reset(self):
+        self.current_ms = pygame.time.get_ticks()
+
+
+    def has_passed(self, ms):
+        return pygame.time.get_ticks() - self.current_ms >= ms
+
+
 # Starts with a plain white surface
 class GameObject:
-    def __init__(self, rect, surf):
+    def __init__(self, rect, surf, tag):
+        self.tag = tag
         self.rect = rect
         self.surface = surf
         # the "dead" variable tells the game whether or not this gameObject should be deleted
@@ -53,38 +80,57 @@ class GameObject:
 
     # "events" parameter is the event list from the pygame loop
     @abstractmethod
-    def update(self, events, keys):
+    def update(self, events, keys, scene):
+        pass
+
+    @abstractmethod
+    def on_death(self):
         pass
 
 
 class Player(GameObject, ABC):
+    # Our player texture is facing right by default
+    facing_right = True
+
     def __init__(self):
-        p_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 20, 20)
-        p_surf = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
-        super().__init__(p_rect, p_surf)
+        p_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 24, 48)
+        p_surf = pygame.image.load("assets/Chardle_Small.png").convert_alpha()
+        p_surf = pygame.transform.scale(p_surf, p_rect.size)
+        super().__init__(p_rect, p_surf, TAG_PLAYER)
 
 
     def render(self, display_screen):
         debug_surface = pygame.Surface((self.rect.w, self.rect.h))
         debug_surface.fill(WHITE)
-        display_screen.blit(debug_surface, self.rect.topleft)
+        display_screen.blit(self.surface, self.rect.topleft)
         # temporarily disabled that until we fix the textures
         #super().render(display_screen)
 
 
-    def update(self, events, keys):
+    def update(self, events, keys, scene):
         # Player move input
         dx = 0
         dy = 0
 
         if keys[pygame.K_w] and self.rect.top > 0:
-            dy = -PLAYER_SPEED
+            dy += -PLAYER_SPEED
+
         if keys[pygame.K_s] and self.rect.bottom < HEIGHT:
-            dy = PLAYER_SPEED
+            dy += PLAYER_SPEED
+
         if keys[pygame.K_a] and self.rect.left > 0:
-            dx = -PLAYER_SPEED
+            dx += -PLAYER_SPEED
+            if self.facing_right:
+                self.surface = pygame.transform.flip(self.surface, True, False)
+                self.facing_right = False
+
         if keys[pygame.K_d] and self.rect.right < WIDTH:
-            dx = PLAYER_SPEED
+            dx += PLAYER_SPEED
+            if not self.facing_right:
+                self.surface = pygame.transform.flip(self.surface, True, False)
+                self.facing_right = True
+
+        # Flip our sprite depending on which way we move
 
         self.rect.move_ip(dx, dy)
 
@@ -108,7 +154,12 @@ class Player(GameObject, ABC):
         motion_x = (delta_x / straight) * BULLET_SPEED
         motion_y = (delta_y / straight) * BULLET_SPEED
 
+        pygame.mixer.Sound.play(SOUND_SHOOT, 0)
         current_scene.game_objects.append(Bullet(player_x, player_y, motion_x, motion_y))
+
+
+    def on_death(self):
+        pass
 
 
 class Bullet(GameObject, ABC):
@@ -116,7 +167,7 @@ class Bullet(GameObject, ABC):
         z_rect = pygame.Rect(x, y, 5, 5)
         z_surf = pygame.Surface(z_rect.size)
         z_surf.fill((255, 255, 0))
-        super().__init__(z_rect, z_surf)
+        super().__init__(z_rect, z_surf, TAG_BULLET)
 
         self.motion_x = motion_x
         self.motion_y = motion_y
@@ -125,31 +176,57 @@ class Bullet(GameObject, ABC):
     def render(self, display_screen):
         super().render(display_screen)
 
-    def update(self, events, key):
+    def update(self, events, key, scene):
         self.rect.move_ip(self.motion_x, self.motion_y)
 
         if not is_within_bonuds(self.rect.x, self.rect.y):
             self.dead = True
             return
 
+        # Loop through each zombie to see if we hit and kill
+        for obj in scene.game_objects:
+            if obj.tag != TAG_ZOMBIE:
+                continue
+
+            if self.rect.colliderect(obj.rect):
+                # Kill zombie
+                obj.on_shot()
+                # Kill bullet
+                self.dead = True
+                break
+
+
+    def on_death(self):
+        pass
+
 
 class Zombie(GameObject, ABC):
 
+    shot = False
     movement_speed = 3.5
 
     def __init__(self):
         z_rect = pygame.Rect(0, 0, 20, 20)
         z_surf = Surface(z_rect.size)
         z_surf.fill((32, 255, 32))
-        super().__init__(z_rect, z_surf)
+
+        super().__init__(z_rect, z_surf, TAG_ZOMBIE)
+
+        self.death_stopwatch = Stopwatch()
 
 
     def render(self, display_screen):
         super().render(display_screen)
 
 
-    def update(self, events, keys):
+    def update(self, events, keys, scene):
         if type(current_scene) is not World:
+            return
+
+        if self.shot:
+            if self.death_stopwatch.has_passed(250):
+                self.dead = True
+
             return
 
         player = current_scene.player
@@ -181,7 +258,20 @@ class Zombie(GameObject, ABC):
         else:
             dy = 0
 
+        # Move towards the player
         self.rect.move_ip(dx, dy)
+
+    def on_shot(self):
+        if not self.shot:
+            self.surface.fill((255, 0, 0))
+            self.shot = True
+            self.death_stopwatch.start()
+
+        pygame.mixer.Sound.play(SOUND_HURT, 0)
+
+    def on_death(self):
+        pygame.mixer.Sound.play(SOUND_DEATH, 0)
+        pass
 
 
 # Our class for each scene.
@@ -270,7 +360,6 @@ class MainMenu(Scene, ABC):
                 self.chasing = True
 
 
-
     def update_scene(self, events, keys):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -300,13 +389,19 @@ class World(Scene, ABC):
 
 
     def update_scene(self, events, keys):
-        self.player.update(events, keys)
+        self.player.update(events, keys, self)
 
         for obj in self.game_objects:
-            obj.update(events, keys)
+            obj.update(events, keys, self)
+
+            if obj.dead:
+                obj.on_death()
+                continue
+
 
         # Re-setting the list to one without all the dead gameObjects
         # (cleanup of out-of-bounds bullets and dead zombies)
+
         self.game_objects = [obj for obj in self.game_objects if not obj.dead]
 
 
@@ -322,7 +417,7 @@ WORLD = World()         # "world"
 scenes = {
     MAIN_MENU.name: MAIN_MENU,
     WORLD.name: WORLD
-    # DEATH.name: DEATH
+    # GAMEOVER.name : GAMEOVER
 }
 
 
