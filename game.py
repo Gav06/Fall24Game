@@ -10,8 +10,10 @@ Lucas Allen
 """
 
 from abc import abstractmethod, ABC
+
 import pygame
 import random
+import math
 
 from pygame import Surface
 
@@ -101,8 +103,10 @@ class Player(GameObject, ABC):
         delta_x = x - player_x
         delta_y = y - player_y
 
-        motion_x = (BULLET_SPEED * delta_x) / 100
-        motion_y = (BULLET_SPEED * delta_y) / 100
+        straight = math.sqrt(delta_x**2 + delta_y**2)
+
+        motion_x = (delta_x / straight) * BULLET_SPEED
+        motion_y = (delta_y / straight) * BULLET_SPEED
 
         current_scene.game_objects.append(Bullet(player_x, player_y, motion_x, motion_y))
 
