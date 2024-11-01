@@ -60,7 +60,10 @@ class Stopwatch:
 
 
     def has_passed(self, ms):
-        return pygame.time.get_ticks() - self.current_ms >= ms
+        return self.elapsed_time() >= ms
+
+    def elapsed_time(self):
+        return pygame.time.get_ticks() - self.current_ms
 
 
 # Starts with a plain white surface
@@ -422,6 +425,7 @@ scenes = {
 running = True
 # Our scene is Main menu by default
 current_scene = scenes["menu"]
+frame_timer = Stopwatch()
 
 def is_within_bonuds(x, y):
     return 0 < x < WIDTH and 0 < y < HEIGHT
@@ -454,12 +458,16 @@ def game_loop():
     global running
 
     while running:
+        frame_timer.reset()
+
         # Updates
         update_pass()
         render_pass(screen)
 
         pygame.display.flip()
         pygame.time.Clock().tick(60)
+
+        print(f"Frame time {frame_timer.elapsed_time()}ms")
 
 
 def __main__():
