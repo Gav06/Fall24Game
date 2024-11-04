@@ -32,6 +32,7 @@ GRASS_GREEN = (60, 179, 113)
 # Init pygame and our font
 pygame.init()
 FONT = pygame.font.Font("assets/pokemonFont.ttf", 32)
+FONT_SMALL = pygame.font.Font("assets/pokemonFont.ttf", 20)
 
 # Sound effects
 SOUND_SHOOT = pygame.mixer.Sound("assets/shoot2.wav")
@@ -151,6 +152,10 @@ class Player(GameObject, ABC):
 
         dx = x - px
         dy = y - py
+
+        # Make sure we don't divide by zero (if mouse is EXACTLY on top of our character)
+        dx = 1 if dx == 0 else dx
+        dy = 1 if dy == 0 else dy
 
         h = math.sqrt(dx**2 + dy**2)
 
@@ -380,10 +385,11 @@ class World(Scene, ABC):
         super().__init__("world")
         self.player = Player()
         self.game_objects.append(Zombie())
+        self.current_wave = 1
 
 
     def draw_scene(self, display_screen):
-        global SHOW_DEBUG_HITBOXES
+        global SHOW_DEBUG_HITBOXES, WHITE
 
         display_screen.fill(BLACK)
 
@@ -402,8 +408,15 @@ class World(Scene, ABC):
 
             obj.render(display_screen)
 
+        wave_counter = FONT_SMALL.render(f"Wave: {self.current_wave}", True, WHITE)
+        display_screen.blit(wave_counter, (4, 4))
+
 
     def update_scene(self, events, keys):
+        for event in events:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                self.reset()
+
         self.player.update(events, keys, self)
 
         for obj in self.game_objects:
@@ -418,6 +431,11 @@ class World(Scene, ABC):
         # (cleanup of out-of-bounds bullets and dead zombies)
 
         self.game_objects = [obj for obj in self.game_objects if not obj.dead]
+
+
+    def reset(self):
+        self.game_objects.clear()
+        self.__init__()
 
 
 """ End World """
@@ -480,7 +498,7 @@ def game_loop():
         pygame.display.flip()
         pygame.time.Clock().tick(60)
 
-        print(f"Frame time {frame_timer.elapsed_time()}ms")
+        #print(f"Frame time {frame_timer.elapsed_time()}ms")
 
 
 def __main__():
