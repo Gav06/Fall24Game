@@ -46,6 +46,9 @@ TAG_BULLET = "bullet"
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
+# When true, draws debug hitboxes around all characters
+SHOW_DEBUG_HITBOXES = True
+
 # Used for animations and stuff
 class Stopwatch:
 
@@ -143,7 +146,6 @@ class Player(GameObject, ABC):
 
     # Fires a projectile with the current load-out towards the current position
     def shoot(self, x, y):
-
         px = self.rect.centerx
         py = self.rect.centery
 
@@ -381,12 +383,24 @@ class World(Scene, ABC):
 
 
     def draw_scene(self, display_screen):
+        global SHOW_DEBUG_HITBOXES
+
         display_screen.fill(BLACK)
+
+        if SHOW_DEBUG_HITBOXES:
+            player_box = pygame.Surface(self.player.rect.size)
+            player_box.fill((255, 0, 255))
+            display_screen.blit(player_box, self.player.rect.topleft)
+
         self.player.render(display_screen)
 
         for obj in self.game_objects:
-            obj.render(display_screen)
+            if SHOW_DEBUG_HITBOXES:
+                hitbox = pygame.Surface((obj.rect.w + 2, obj.rect.h + 2))
+                hitbox.fill((255, 0, 0))
+                display_screen.blit(hitbox, (obj.rect.x - 1, obj.rect.y - 1))
 
+            obj.render(display_screen)
 
 
     def update_scene(self, events, keys):
@@ -404,7 +418,6 @@ class World(Scene, ABC):
         # (cleanup of out-of-bounds bullets and dead zombies)
 
         self.game_objects = [obj for obj in self.game_objects if not obj.dead]
-
 
 
 """ End World """
