@@ -22,8 +22,8 @@ pygame.init()
 WIDTH = 1280
 HEIGHT = 720
 
-PLAYER_SPEED = 5
-BULLET_SPEED = 20
+PLAYER_SPEED = 5.0
+BULLET_SPEED = 20.0
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -32,6 +32,7 @@ GRASS_GREEN = (60, 179, 113)
 # Init pygame and our font
 pygame.init()
 FONT = pygame.font.Font("assets/pokemonFont.ttf", 32)
+FONT_SMALL = pygame.font.Font("assets/pokemonFont.ttf", 20)
 
 # Sound effects
 SOUND_SHOOT = pygame.mixer.Sound("assets/shoot2.wav")
@@ -45,6 +46,9 @@ TAG_BULLET = "bullet"
 # Pygame constants
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
+
+# When true, draws debug hitboxes around all characters
+SHOW_DEBUG_HITBOXES = False
 
 # Used for animations and stuff
 class Stopwatch:
@@ -143,14 +147,16 @@ class Player(GameObject, ABC):
 
     # Fires a projectile with the current load-out towards the current position
     def shoot(self, x, y):
-
+        # Bullet mathematics
         px = self.rect.centerx
         py = self.rect.centery
-
         dx = x - px
         dy = y - py
+        # Make sure we don't divide by zero (if mouse is EXACTLY on top of our character)
+        dx = 1.0 if dx == 0.0 else dx
+        dy = 1.0 if dy == 0.0 else dy
 
-        h = math.sqrt(dx**2 + dy**2)
+        h = math.sqrt(pow(dx, 2.0) + pow(dy, 2.0))
 
         mx = (dx / h) * BULLET_SPEED
         my = (dy / h) * BULLET_SPEED
@@ -162,25 +168,40 @@ class Player(GameObject, ABC):
     def on_death(self):
         pass
 
+"""
+The bullet does not rely on the Rect class for its position,
+because the Rect class only uses ints and not floats,
+we need floats to be more precise.
 
+Before this change the aiming was terribly imprecise,
+especially at diagonal angles.
+"""
 class Bullet(GameObject, ABC):
-    def __init__(self, x, y, motion_x, motion_y):
-        b_rect = pygame.Rect(x, y, 5, 5)
+    def __init__(self, x, y, motion_x: float, motion_y: float):
+        self.size = 5
+
+        b_rect = pygame.Rect(x, y, self.size, self.size)
         b_surf = pygame.Surface(b_rect.size)
         b_surf.fill((255, 255, 0))
-        super().__init__(b_rect, b_surf, TAG_BULLET)
+
+        self.pos_x = x
+        self.pos_y = y
 
         self.motion_x = motion_x
         self.motion_y = motion_y
 
+        super().__init__(b_rect, b_surf, TAG_BULLET)
+
 
     def render(self, display_screen):
-        super().render(display_screen)
+        display_screen.blit(self.surface, (self.pos_x - (self.size / 2), self.pos_y - (self.size / 2)))
+
 
     def update(self, events, key, scene):
-        self.rect.move_ip(self.motion_x, self.motion_y)
+        self.pos_x += self.motion_x
+        self.pos_y += self.motion_y
 
-        if not is_within_bonuds(self.rect.x, self.rect.y):
+        if not is_within_bounds(self.pos_x, self.pos_y):
             self.dead = True
             return
 
@@ -189,7 +210,7 @@ class Bullet(GameObject, ABC):
             if obj.tag != TAG_ZOMBIE:
                 continue
 
-            if self.rect.colliderect(obj.rect):
+            if obj.rect.collidepoint(self.pos_x, self.pos_y):
                 # Kill zombie
                 obj.on_shot()
                 # Kill bullet
@@ -206,14 +227,18 @@ class Zombie(GameObject, ABC):
     shot = False
     movement_speed = 3.5
 
-    def __init__(self):
-        z_rect = pygame.Rect(0, 0, 20, 20)
+    def __init__(self, x, y):
+        z_rect = pygame.Rect(x, y, 20, 20)
         z_surf = pygame.Surface(z_rect.size)
         z_surf.fill((32, 255, 32))
 
         super().__init__(z_rect, z_surf, TAG_ZOMBIE)
 
         self.death_stopwatch = Stopwatch()
+        # Default/placeholder values for the direction, will be instantly changed on first update of zombie
+        # Typically either 1 or -1 or 0
+        self.x_dir = 0
+        self.y_dir = 0
 
 
     def render(self, display_screen):
@@ -241,23 +266,23 @@ class Zombie(GameObject, ABC):
         dx = self.movement_speed
         dy = self.movement_speed
 
-        # if player is to the left of us
+        # Find which way we will move towards player
         if px < zx:
-            dx *= -1
-        # if player is to the right
+            self.x_dir = -1
         elif px > zx:
-            dx *= 1
+            self.x_dir = 1
         else:
-            dx = 0
+            self.x_dir = 0
 
-        # if player is above us
         if py < zy:
-            dy *= -1
-        # if player is below
+            self.y_dir = -1
         elif py > zy:
-            dy *= 1
+            self.y_dir = 1
         else:
-            dy = 0
+            self.y_dir = 0
+
+        dx *= self.x_dir
+        dy *= self.y_dir
 
         # Move towards the player
         self.rect.move_ip(dx, dy)
@@ -373,23 +398,85 @@ class MainMenu(Scene, ABC):
 """ Begin World """
 
 class World(Scene, ABC):
+    # Hard zombie limit, to prevent lag or whatever
+    ZOMBIE_LIMIT = 50
+
+    # Debug/developer variables
+    should_spawn_zombies = True
+    draw_leading_shots = False
+    draw_tracer = False
 
     def __init__(self):
         super().__init__("world")
         self.player = Player()
-        self.game_objects.append(Zombie())
+        self.current_wave = 1
+        self.spawn_timer = Stopwatch()
+        self.zombie_count = 0
 
 
     def draw_scene(self, display_screen):
+        global SHOW_DEBUG_HITBOXES, WHITE
+        # Backdrop
         display_screen.fill(BLACK)
+
+        # Player hitbox (if applicable)
+        if SHOW_DEBUG_HITBOXES:
+            player_box = pygame.Surface(self.player.rect.size)
+            player_box.fill((255, 0, 255))
+            display_screen.blit(player_box, self.player.rect.topleft)
+
+        # Draw player
         self.player.render(display_screen)
 
+        # Draw zombies and bullets
         for obj in self.game_objects:
+            if SHOW_DEBUG_HITBOXES:
+                hitbox = pygame.Surface((obj.rect.w + 2, obj.rect.h + 2))
+                hitbox.fill((255, 0, 0))
+                display_screen.blit(hitbox, (obj.rect.x - 1, obj.rect.y - 1))
+
             obj.render(display_screen)
 
+        # Draw overlays and stuff
+
+
+        # Experimental leading shots feature, maybe will be an upgrade?
+        if self.draw_leading_shots:
+            for obj in self.game_objects:
+                if type(obj) != Zombie:
+                    continue
+
+                # Find the future x and y of where the bullet and the zombie will end up
+                dist = distance(self.player.rect.center, obj.rect.center)
+
+                # The number of frames it will take for the bullet to reach the zombie
+                bullet_time_frame_count = dist / BULLET_SPEED
+                # The zombie's future position after that number of frames
+                z_future_x = ((obj.movement_speed * obj.x_dir) * bullet_time_frame_count) + obj.rect.centerx
+                z_future_y = ((obj.movement_speed * obj.y_dir) * bullet_time_frame_count) + obj.rect.centery
+
+                pygame.draw.circle(display_screen, (255, 0, 255), (z_future_x, z_future_y), 10)
+
+        # Draw tracer line
+        if self.draw_tracer:
+            pygame.draw.line(display_screen, (196, 64, 64), self.player.rect.center, pygame.mouse.get_pos())
+
+        wave_counter = FONT_SMALL.render(f"Wave: {self.current_wave}", True, WHITE)
+        display_screen.blit(wave_counter, (4, 4))
 
 
     def update_scene(self, events, keys):
+        for event in events:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                self.reset()
+
+        # Spawn zombies when needed
+        if self.spawn_timer.has_passed(2500):
+            self.spawn_zombie_random()
+            self.spawn_timer.reset()
+
+
+        # Update player, zombies, and bullets
         self.player.update(events, keys, self)
 
         for obj in self.game_objects:
@@ -397,6 +484,8 @@ class World(Scene, ABC):
 
             if obj.dead:
                 obj.on_death()
+                if type(obj) == Zombie:
+                    self.zombie_count -= 1
                 continue
 
 
@@ -405,6 +494,31 @@ class World(Scene, ABC):
 
         self.game_objects = [obj for obj in self.game_objects if not obj.dead]
 
+
+    def reset(self):
+        self.game_objects.clear()
+        self.__init__()
+
+    # Called many times throughout the course of a wave, spawns a random zombie in a random location about the player
+    def spawn_zombie_random(self):
+        if self.zombie_count >= self.ZOMBIE_LIMIT or (not self.should_spawn_zombies):
+            return
+
+        # Set our initial spawn position to the player so we guarantee the loop to run
+        spawn_x = self.player.rect.x
+        spawn_y = self.player.rect.y
+        min_dist = 100
+
+        # Find a good Y
+        while abs(self.player.rect.x - spawn_x) < min_dist:
+            spawn_x = random.randint(0, WIDTH)
+
+        # Find a good X
+        while abs(self.player.rect.y - spawn_y) < min_dist:
+            spawn_y = random.randint(0, HEIGHT)
+
+        self.game_objects.append(Zombie(spawn_x, spawn_y))
+        self.zombie_count += 1
 
 
 """ End World """
@@ -427,7 +541,11 @@ running = True
 current_scene = scenes["menu"]
 frame_timer = Stopwatch()
 
-def is_within_bonuds(x, y):
+# Takes in 2 positions, both a tuple of: (int, int), returns a float (i think)
+def distance(pos1, pos2):
+    return math.sqrt((pos2[0] - pos1[0])**2 + (pos2[1] - pos1[1])**2)
+
+def is_within_bounds(x, y):
     return 0 < x < WIDTH and 0 < y < HEIGHT
 
 def change_scene(scene_name):
@@ -467,7 +585,7 @@ def game_loop():
         pygame.display.flip()
         pygame.time.Clock().tick(60)
 
-        print(f"Frame time {frame_timer.elapsed_time()}ms")
+        #print(f"Frame time {frame_timer.elapsed_time()}ms")
 
 
 def __main__():
