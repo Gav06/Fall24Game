@@ -53,18 +53,32 @@ SHOW_DEBUG_HITBOXES = False
 # Used for animations and stuff
 class Stopwatch:
 
-    current_ms = 0
+    def __init__(self):
+        self.current_ms = 0
+        self.started = False
 
     def start(self):
-        self.reset()
+        if not self.started:
+            self.started = True
+            self.reset()
+
+
+    def stop(self):
+        self.started = False
 
 
     def reset(self):
         self.current_ms = pygame.time.get_ticks()
 
 
+    def restart(self):
+        self.reset()
+        self.start()
+
+
     def has_passed(self, ms):
         return self.elapsed_time() >= ms
+
 
     def elapsed_time(self):
         return pygame.time.get_ticks() - self.current_ms
@@ -88,6 +102,7 @@ class GameObject:
     def update(self, events, keys, scene):
         pass
 
+
     @abstractmethod
     def on_death(self):
         pass
@@ -101,6 +116,8 @@ class Player(GameObject, ABC):
         p_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 24, 48)
         p_surf = pygame.image.load("assets/Chardle_Small.png").convert_alpha()
         p_surf = pygame.transform.scale(p_surf, p_rect.size)
+        self.health = 100.0
+        self.hurt_timer = Stopwatch()
         super().__init__(p_rect, p_surf, TAG_PLAYER)
 
 
@@ -113,6 +130,9 @@ class Player(GameObject, ABC):
 
 
     def update(self, events, keys, scene):
+        if self.health <= 0.0:
+            self.dead = True
+
         # Player move input
         dx = 0
         dy = 0
@@ -167,6 +187,16 @@ class Player(GameObject, ABC):
 
     def on_death(self):
         pass
+
+
+    def on_hurt(self, zombie):
+        self.hurt_timer.start()
+
+        if self.hurt_timer.has_passed(750):
+            self.health -= 20.0
+            pygame.mixer.Sound.play(SOUND_HURT, 0)
+            self.hurt_timer.stop()
+
 
 """
 The bullet does not rely on the Rect class for its position,
@@ -287,6 +317,10 @@ class Zombie(GameObject, ABC):
         # Move towards the player
         self.rect.move_ip(dx, dy)
 
+
+        if self.rect.colliderect(player):
+            player.on_hurt(self)
+
     def on_shot(self):
         if not self.shot:
             self.surface.fill((255, 0, 0))
@@ -406,16 +440,19 @@ class World(Scene, ABC):
 
     # Debug/developer variables
     should_spawn_zombies = True
-    draw_leading_shots = False
     draw_tracer = False
 
     def __init__(self):
         super().__init__("world")
         self.player = Player()
-        self.current_wave = 1
+        self.current_wave = 0
         self.spawn_timer = Stopwatch()
         self.zombie_count = 0
         self.kill_count = 0
+        # Each wave is 30 seconds (30,000ms)
+        self.wave_length = 20 * 1000
+        self.wave_timer = Stopwatch()
+        self.wave_countdown = Stopwatch()
 
 
     def draw_scene(self, display_screen):
@@ -443,24 +480,6 @@ class World(Scene, ABC):
 
         # Draw overlays and stuff
 
-
-        # Experimental leading shots feature, maybe will be an upgrade?
-        if self.draw_leading_shots:
-            for obj in self.game_objects:
-                if type(obj) != Zombie:
-                    continue
-
-                # Find the future x and y of where the bullet and the zombie will end up
-                dist = distance(self.player.rect.center, obj.rect.center)
-
-                # The number of frames it will take for the bullet to reach the zombie
-                bullet_time_frame_count = dist / BULLET_SPEED
-                # The zombie's future position after that number of frames
-                z_future_x = ((obj.movement_speed * obj.x_dir) * bullet_time_frame_count) + obj.rect.centerx
-                z_future_y = ((obj.movement_speed * obj.y_dir) * bullet_time_frame_count) + obj.rect.centery
-
-                pygame.draw.circle(display_screen, (255, 0, 255), (z_future_x, z_future_y), 10)
-
         # Draw tracer line
         if self.draw_tracer:
             pygame.draw.line(display_screen, (196, 64, 64), self.player.rect.center, pygame.mouse.get_pos())
@@ -471,16 +490,31 @@ class World(Scene, ABC):
         kill_counter = FONT_SMALL.render(f"Kills: {self.kill_count}", True, WHITE)
         display_screen.blit(kill_counter, (4, 28))
 
+        if self.wave_countdown.started:
+            countdown_text = FONT.render(f"Wave starting in {3000 - self.wave_countdown.elapsed_time()}ms...",
+                                         True, WHITE)
+            display_screen.blit(countdown_text, (WIDTH / 2 - (countdown_text.get_width() / 2),
+                                                 HEIGHT / 2 - (countdown_text.get_height() / 2)))
+
 
     def update_scene(self, events, keys):
+        # initial start
+        if self.current_wave == 0:
+            self.start_next_wave()
+
         for event in events:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                self.reset()
+            if event.type == pygame.KEYDOWN:
+                match event.key:
+                    case pygame.K_r:
+                        self.reset()
+                    case pygame.K_ESCAPE:
+                        change_scene("menu")
+
 
         # Spawn zombies when needed
         if self.spawn_timer.has_passed(2500):
             self.spawn_zombie_random()
-            self.spawn_timer.reset()
+            self.spawn_timer.restart()
 
 
         # Update player, zombies, and bullets
@@ -528,7 +562,23 @@ class World(Scene, ABC):
         self.zombie_count += 1
 
 
+    def start_next_wave(self):
+        pass
+
 """ End World """
+
+class DeathScreen(Scene, ABC):
+
+    def __init__(self, name):
+        super().__init__(name)
+
+    def update_scene(self, events, keys):
+        pass
+
+
+    def draw_scene(self, display_screen):
+        pass
+
 
 # This Section is for game scenes and variables, not stuff needed explicitly in each level or in the gameplay itself
 MAIN_MENU = MainMenu()  # "menu"
@@ -583,7 +633,7 @@ def game_loop():
     global running
 
     while running:
-        frame_timer.reset()
+        frame_timer.restart()
 
         # Updates
         update_pass()
