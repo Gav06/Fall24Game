@@ -235,6 +235,10 @@ class Zombie(GameObject, ABC):
         super().__init__(z_rect, z_surf, TAG_ZOMBIE)
 
         self.death_stopwatch = Stopwatch()
+        # Default/placeholder values for the direction, will be instantly changed on first update of zombie
+        # Typically either 1 or -1 or 0
+        self.x_dir = 0
+        self.y_dir = 0
 
 
     def render(self, display_screen):
@@ -262,23 +266,23 @@ class Zombie(GameObject, ABC):
         dx = self.movement_speed
         dy = self.movement_speed
 
-        # if player is to the left of us
+        # Find which way we will move towards player
         if px < zx:
-            dx *= -1
-        # if player is to the right
+            self.x_dir = -1
         elif px > zx:
-            dx *= 1
+            self.x_dir = 1
         else:
-            dx = 0
+            self.x_dir = 0
 
-        # if player is above us
         if py < zy:
-            dy *= -1
-        # if player is below
+            self.y_dir = -1
         elif py > zy:
-            dy *= 1
+            self.y_dir = 1
         else:
-            dy = 0
+            self.y_dir = 0
+
+        dx *= self.x_dir
+        dy *= self.y_dir
 
         # Move towards the player
         self.rect.move_ip(dx, dy)
@@ -394,9 +398,13 @@ class MainMenu(Scene, ABC):
 """ Begin World """
 
 class World(Scene, ABC):
+    # Hard zombie limit, to prevent lag or whatever
+    ZOMBIE_LIMIT = 50
 
-    zombie_limit = 50
+    # Debug/developer variables
     should_spawn_zombies = True
+    draw_leading_shots = False
+    draw_tracer = False
 
     def __init__(self):
         super().__init__("world")
@@ -431,8 +439,27 @@ class World(Scene, ABC):
 
         # Draw overlays and stuff
 
-        # Draw tracer line (probably temporary)
-        pygame.draw.line(display_screen, (196, 64, 64), self.player.rect.center, pygame.mouse.get_pos())
+
+        # Experimental leading shots feature, maybe will be an upgrade?
+        if self.draw_leading_shots:
+            for obj in self.game_objects:
+                if type(obj) != Zombie:
+                    continue
+
+                # Find the future x and y of where the bullet and the zombie will end up
+                dist = distance(self.player.rect.center, obj.rect.center)
+
+                # The number of frames it will take for the bullet to reach the zombie
+                bullet_time_frame_count = dist / BULLET_SPEED
+                # The zombie's future position after that number of frames
+                z_future_x = ((obj.movement_speed * obj.x_dir) * bullet_time_frame_count) + obj.rect.centerx
+                z_future_y = ((obj.movement_speed * obj.y_dir) * bullet_time_frame_count) + obj.rect.centery
+
+                pygame.draw.circle(display_screen, (255, 0, 255), (z_future_x, z_future_y), 10)
+
+        # Draw tracer line
+        if self.draw_tracer:
+            pygame.draw.line(display_screen, (196, 64, 64), self.player.rect.center, pygame.mouse.get_pos())
 
         wave_counter = FONT_SMALL.render(f"Wave: {self.current_wave}", True, WHITE)
         display_screen.blit(wave_counter, (4, 4))
@@ -474,7 +501,7 @@ class World(Scene, ABC):
 
     # Called many times throughout the course of a wave, spawns a random zombie in a random location about the player
     def spawn_zombie_random(self):
-        if self.zombie_count >= self.zombie_limit or (not self.should_spawn_zombies):
+        if self.zombie_count >= self.ZOMBIE_LIMIT or (not self.should_spawn_zombies):
             return
 
         # Set our initial spawn position to the player so we guarantee the loop to run
@@ -492,7 +519,6 @@ class World(Scene, ABC):
 
         self.game_objects.append(Zombie(spawn_x, spawn_y))
         self.zombie_count += 1
-
 
 
 """ End World """
