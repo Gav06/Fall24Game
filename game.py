@@ -442,10 +442,14 @@ class MainMenu(Scene, ABC):
         if not self.sound_playing:
             self.image2_sound.play(1)
             self.sound_playing = True
+
+
     def stop_sound(self):
         if self.sound_playing:
             self.image2_sound.stop()
             self.sound_playing = False
+
+
     def update_scene(self, events, keys):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -627,12 +631,16 @@ frame_timer = Stopwatch()
 def distance(pos1, pos2):
     return math.sqrt((pos2[0] - pos1[0])**2 + (pos2[1] - pos1[1])**2)
 
+
 def is_within_bounds(x, y):
     return 0 < x < WIDTH and 0 < y < HEIGHT
+
 
 def change_scene(scene_name):
     global current_scene
     current_scene = scenes[scene_name]
+
+
 def render_pass(display_screen):
     current_scene.draw_scene(display_screen)
 
@@ -648,6 +656,7 @@ def update_pass():
             running = False
 
     current_scene.update_scene(events, keys)
+
 
 def game_init():
     pygame.display.set_caption("Zombie Shooter")
