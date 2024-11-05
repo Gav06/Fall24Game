@@ -297,6 +297,8 @@ class Zombie(GameObject, ABC):
 
     def on_death(self):
         pygame.mixer.Sound.play(SOUND_DEATH, 0)
+        if type(current_scene) == World:
+            current_scene.kill_count += 1
         pass
 
 
@@ -398,6 +400,7 @@ class MainMenu(Scene, ABC):
 """ Begin World """
 
 class World(Scene, ABC):
+
     # Hard zombie limit, to prevent lag or whatever
     ZOMBIE_LIMIT = 50
 
@@ -412,6 +415,7 @@ class World(Scene, ABC):
         self.current_wave = 1
         self.spawn_timer = Stopwatch()
         self.zombie_count = 0
+        self.kill_count = 0
 
 
     def draw_scene(self, display_screen):
@@ -463,6 +467,9 @@ class World(Scene, ABC):
 
         wave_counter = FONT_SMALL.render(f"Wave: {self.current_wave}", True, WHITE)
         display_screen.blit(wave_counter, (4, 4))
+
+        kill_counter = FONT_SMALL.render(f"Kills: {self.kill_count}", True, WHITE)
+        display_screen.blit(kill_counter, (4, 28))
 
 
     def update_scene(self, events, keys):
