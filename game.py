@@ -333,10 +333,13 @@ class MainMenu(Scene, ABC):
     square_speed = 2
     chasing = True
 
-    square1_img = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
-    square1_img = pygame.transform.scale(square1_img, (square1.width, square1.height))
-    square2_img = pygame.image.load("assets/Zombie_One.png").convert_alpha()
-    square2_img = pygame.transform.scale(square2_img, (square2.width, square2.height))
+    square1_img_right = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
+    square1_img_right = pygame.transform.scale(square1_img_right, (square1.width, square1.height))
+    square1_img = square1_img_right  # Start with the right-facing image
+
+    square2_img_right = pygame.image.load("assets/Zombie_One.png").convert_alpha()
+    square2_img_right = pygame.transform.scale(square2_img_right, (square2.width, square2.height))
+    square2_img = square2_img_right  # Start with right-facing image
 
     title_text = FONT.render("Survive the Night", True, WHITE)
     title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
@@ -346,7 +349,10 @@ class MainMenu(Scene, ABC):
 
     def __init__(self):
         super().__init__("menu")
-
+        pygame.mixer.init()
+        self.image2_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')
+        self.sound_playing = False
+        self.image2_sound.set_volume(0.75)
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
@@ -362,37 +368,56 @@ class MainMenu(Scene, ABC):
 
             pygame.draw.circle(display_screen, WHITE, self.star_list[i], 2)
 
-        display_screen.blit(self.square2_img, self.square2)
-
-        display_screen.blit(self.square2_img, self.square2)
-
         self.chasing_images()
+
         display_screen.blit(self.square1_img, self.square1)
         display_screen.blit(self.square2_img, self.square2)
+
+        if self.square2.colliderect(quarter_rect):
+            self.play_sound()
+        else:
+            self.stop_sound()
 
         display_screen.blit(self.title_text, self.title_rect)
         display_screen.blit(self.start_text, self.start_rect)
 
+
     def chasing_images(self):
         if self.chasing:
-            self.square1.x -= self.square_speed
+            self.square1.x -= self.square_speed  # Move left
             self.square2.x = self.square1.x + self.square_distance
+                #IMAGE FLIP
+            self.square1_img = pygame.transform.flip(self.square1_img_right, True, False)
+            self.square2_img = pygame.transform.flip(self.square2_img_right, True, False)
 
             if self.square2.x < -self.square_distance:
                 self.chasing = False
         else:
-            self.square1.x += self.square_speed
+            self.square1.x += self.square_speed  # Move right
             self.square2.x = self.square1.x - self.square_distance
+                    #IMAGE FLIP
+            self.square1_img = self.square1_img_right
+            self.square2_img = self.square2_img_right
 
             if self.square1.x > WIDTH:
                 self.chasing = True
 
-
+    image2_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')   #IMPORT SOUND
+    sound_playing = False
+    def play_sound(self):
+        if not self.sound_playing:
+            self.image2_sound.play(1)
+            self.sound_playing = True
+    def stop_sound(self):
+        if self.sound_playing:
+            self.image2_sound.stop()
+            self.sound_playing = False
     def update_scene(self, events, keys):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.start_rect.collidepoint(event.pos):
                     # Switch to level
+                    self.stop_sound()
                     change_scene("world")
 
 """ End Main Menu """
@@ -558,7 +583,6 @@ def is_within_bounds(x, y):
 def change_scene(scene_name):
     global current_scene
     current_scene = scenes[scene_name]
-
 def render_pass(display_screen):
     current_scene.draw_scene(display_screen)
 
