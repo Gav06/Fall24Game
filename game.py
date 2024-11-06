@@ -53,18 +53,32 @@ SHOW_DEBUG_HITBOXES = False
 # Used for animations and stuff
 class Stopwatch:
 
-    current_ms = 0
+    def __init__(self):
+        self.current_ms = 0
+        self.started = False
 
     def start(self):
-        self.reset()
+        if not self.started:
+            self.started = True
+            self.reset()
+
+
+    def stop(self):
+        self.started = False
 
 
     def reset(self):
         self.current_ms = pygame.time.get_ticks()
 
 
+    def restart(self):
+        self.reset()
+        self.start()
+
+
     def has_passed(self, ms):
         return self.elapsed_time() >= ms
+
 
     def elapsed_time(self):
         return pygame.time.get_ticks() - self.current_ms
@@ -88,6 +102,7 @@ class GameObject:
     def update(self, events, keys, scene):
         pass
 
+
     @abstractmethod
     def on_death(self):
         pass
@@ -101,6 +116,8 @@ class Player(GameObject, ABC):
         p_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 24, 48)
         p_surf = pygame.image.load("assets/Chardle_Small.png").convert_alpha()
         p_surf = pygame.transform.scale(p_surf, p_rect.size)
+        self.health = 100.0
+        self.hurt_timer = Stopwatch()
         super().__init__(p_rect, p_surf, TAG_PLAYER)
 
 
@@ -113,6 +130,11 @@ class Player(GameObject, ABC):
 
 
     def update(self, events, keys, scene):
+        if self.health <= 0.0:
+            self.dead = True
+
+            global current_scene
+            current_scene = DeathScreen
         # Player move input
         dx = 0
         dy = 0
@@ -165,8 +187,14 @@ class Player(GameObject, ABC):
         current_scene.game_objects.append(Bullet(px, py, mx, my))
 
 
-    def on_death(self):
-        pass
+    def on_hurt(self, zombie):
+        self.hurt_timer.start()
+
+        if self.hurt_timer.has_passed(750):
+            self.health -= 20.0
+            pygame.mixer.Sound.play(SOUND_HURT, 0)
+            self.hurt_timer.stop()
+
 
 """
 The bullet does not rely on the Rect class for its position,
@@ -287,6 +315,10 @@ class Zombie(GameObject, ABC):
         # Move towards the player
         self.rect.move_ip(dx, dy)
 
+
+        if self.rect.colliderect(player):
+            player.on_hurt(self)
+
     def on_shot(self):
         if not self.shot:
             self.surface.fill((255, 0, 0))
@@ -297,6 +329,8 @@ class Zombie(GameObject, ABC):
 
     def on_death(self):
         pygame.mixer.Sound.play(SOUND_DEATH, 0)
+        if type(current_scene) == World:
+            current_scene.kill_count += 1
         pass
 
 
@@ -325,16 +359,19 @@ class MainMenu(Scene, ABC):
     star_count = 50
     star_list = [(random.randint(0, WIDTH), random.randint(0, HEIGHT * 3 // 4)) for _ in range(star_count)]
 
-    square1 = pygame.Rect(100, HEIGHT * 6 // 8, 70, 90)
-    square2 = pygame.Rect(100, HEIGHT * 6 // 8, 70, 90)
+    square1 = pygame.Rect(100, HEIGHT * 6 // 8, 80, 100)
+    square2 = pygame.Rect(100, HEIGHT * 6 // 8, 80, 100)
     square_distance = 90
     square_speed = 2
     chasing = True
 
-    square1_img = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
-    square1_img = pygame.transform.scale(square1_img, (square1.width, square1.height))
-    square2_img = pygame.image.load("assets/Zombie_One.png").convert_alpha()
-    square2_img = pygame.transform.scale(square2_img, (square2.width, square2.height))
+    square1_img_right = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
+    square1_img_right = pygame.transform.scale(square1_img_right, (square1.width, square1.height))
+    square1_img = square1_img_right  # Start with the right-facing image
+
+    square2_img_right = pygame.image.load("assets/Zombie_One.png").convert_alpha()
+    square2_img_right = pygame.transform.scale(square2_img_right, (square2.width, square2.height))
+    square2_img = square2_img_right  # Start with right-facing image
 
     title_text = FONT.render("Survive the Night", True, WHITE)
     title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
@@ -344,7 +381,12 @@ class MainMenu(Scene, ABC):
 
     def __init__(self):
         super().__init__("menu")
-
+        pygame.mixer.init()
+        self.image1_sound = pygame.mixer.Sound('assets/HelpMe.wav')   #IMPORT SOUND
+        self.image2_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')
+        self.image1_playing = False
+        self.image2_playing = False
+        self.image2_sound.set_volume(0.65)
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
@@ -360,37 +402,64 @@ class MainMenu(Scene, ABC):
 
             pygame.draw.circle(display_screen, WHITE, self.star_list[i], 2)
 
-        display_screen.blit(self.square2_img, self.square2)
-
-        display_screen.blit(self.square2_img, self.square2)
-
         self.chasing_images()
+
         display_screen.blit(self.square1_img, self.square1)
         display_screen.blit(self.square2_img, self.square2)
+
+        if self.square2.colliderect(quarter_rect):
+            self.play_sound()
+        else:
+            self.stop_sound()
 
         display_screen.blit(self.title_text, self.title_rect)
         display_screen.blit(self.start_text, self.start_rect)
 
+
     def chasing_images(self):
         if self.chasing:
-            self.square1.x -= self.square_speed
+            self.square1.x -= self.square_speed  # Move left
             self.square2.x = self.square1.x + self.square_distance
+                #IMAGE FLIP
+            self.square1_img = pygame.transform.flip(self.square1_img_right, True, False)
+            self.square2_img = pygame.transform.flip(self.square2_img_right, True, False)
 
             if self.square2.x < -self.square_distance:
                 self.chasing = False
         else:
-            self.square1.x += self.square_speed
+            self.square1.x += self.square_speed  # Move right
             self.square2.x = self.square1.x - self.square_distance
+                    #IMAGE FLIP
+            self.square1_img = self.square1_img_right
+            self.square2_img = self.square2_img_right
 
             if self.square1.x > WIDTH:
                 self.chasing = True
 
+    def play_sound(self):
+        if not self.image1_playing:
+            self.image1_sound.play(loops=1)
+            self.image1_playing = True
+
+        if not self.image2_playing:
+            self.image2_sound.play(loops=1)
+            self.image2_playing = True
+
+    def stop_sound(self):
+        if self.image1_playing:
+            self.image1_sound.stop()
+            self.image1_playing = False
+
+        if self.image2_playing:
+            self.image2_sound.stop()
+            self.image2_playing = False
 
     def update_scene(self, events, keys):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.start_rect.collidepoint(event.pos):
                     # Switch to level
+                    self.stop_sound()
                     change_scene("world")
 
 """ End Main Menu """
@@ -398,20 +467,25 @@ class MainMenu(Scene, ABC):
 """ Begin World """
 
 class World(Scene, ABC):
+
     # Hard zombie limit, to prevent lag or whatever
     ZOMBIE_LIMIT = 50
 
     # Debug/developer variables
     should_spawn_zombies = True
-    draw_leading_shots = False
     draw_tracer = False
 
     def __init__(self):
         super().__init__("world")
         self.player = Player()
-        self.current_wave = 1
+        self.current_wave = 0
         self.spawn_timer = Stopwatch()
         self.zombie_count = 0
+        self.kill_count = 0
+        # Each wave is 30 seconds (30,000ms)
+        self.wave_length = 20 * 1000
+        self.wave_timer = Stopwatch()
+        self.wave_countdown = Stopwatch()
 
 
     def draw_scene(self, display_screen):
@@ -439,24 +513,6 @@ class World(Scene, ABC):
 
         # Draw overlays and stuff
 
-
-        # Experimental leading shots feature, maybe will be an upgrade?
-        if self.draw_leading_shots:
-            for obj in self.game_objects:
-                if type(obj) != Zombie:
-                    continue
-
-                # Find the future x and y of where the bullet and the zombie will end up
-                dist = distance(self.player.rect.center, obj.rect.center)
-
-                # The number of frames it will take for the bullet to reach the zombie
-                bullet_time_frame_count = dist / BULLET_SPEED
-                # The zombie's future position after that number of frames
-                z_future_x = ((obj.movement_speed * obj.x_dir) * bullet_time_frame_count) + obj.rect.centerx
-                z_future_y = ((obj.movement_speed * obj.y_dir) * bullet_time_frame_count) + obj.rect.centery
-
-                pygame.draw.circle(display_screen, (255, 0, 255), (z_future_x, z_future_y), 10)
-
         # Draw tracer line
         if self.draw_tracer:
             pygame.draw.line(display_screen, (196, 64, 64), self.player.rect.center, pygame.mouse.get_pos())
@@ -464,16 +520,33 @@ class World(Scene, ABC):
         wave_counter = FONT_SMALL.render(f"Wave: {self.current_wave}", True, WHITE)
         display_screen.blit(wave_counter, (4, 4))
 
+        kill_counter = FONT_SMALL.render(f"Kills: {self.kill_count}", True, WHITE)
+        display_screen.blit(kill_counter, (4, 28))
+
+        if self.wave_countdown.started:
+            countdown_text = FONT.render(f"Wave starting in {3000 - self.wave_countdown.elapsed_time()}ms...",
+                                         True, WHITE)
+            display_screen.blit(countdown_text, (WIDTH / 2 - (countdown_text.get_width() / 2),
+                                                 HEIGHT / 2 - (countdown_text.get_height() / 2)))
+
 
     def update_scene(self, events, keys):
+        # initial start
+        if self.current_wave == 0:
+            self.start_next_wave()
+
         for event in events:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                self.reset()
+            if event.type == pygame.KEYDOWN:
+                match event.key:
+                    case pygame.K_r:
+                        self.reset()
+                    case pygame.K_ESCAPE:
+                        change_scene("menu")
 
         # Spawn zombies when needed
         if self.spawn_timer.has_passed(2500):
             self.spawn_zombie_random()
-            self.spawn_timer.reset()
+            self.spawn_timer.restart()
 
 
         # Update player, zombies, and bullets
@@ -521,7 +594,47 @@ class World(Scene, ABC):
         self.zombie_count += 1
 
 
+    def start_next_wave(self):
+        pass
+
 """ End World """
+
+class DeathScreen(Scene, ABC):
+
+    def __init__(self, name, score):
+        super().__init__(name)
+        self.score = score
+        self.restart_text = FONT.render("Press 'R' to Restart", True, WHITE)
+        self.quit_text = FONT.render("Press 'Q' to Quit",True, WHITE)
+        self.game_over = FONT.render("Game Over", True, RED)
+        self.score_text = FONT.render(f"Score: {self.score}")
+
+        self.game_over_rect = self.game_over.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        self.score_rect = self.score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        self.restart_rect = self.restart_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+        self.quit_rect = self.quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
+    def update_scene(self, events, keys):
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    global current_scene
+                    current_scene = MainMenu()
+                elif event.key == pygame.K_q:
+                    pygame.quit()
+                    exit()
+
+    def draw_scene(self, display_screen):
+        display_screen.fill(BLACK)
+
+        display_screen.blit(self.game_over, self.game_over_rect)
+        display_screen.blit(self.score_text, self.score_rect)
+        display_screen.blit(self.restart_text, self.restart_rect)
+        display_screen.blit(self.quit_text, self.quit_rect)
+
+    def start_new_game(self):
+        global current_scene
+        current_scene = World()
+
 
 # This Section is for game scenes and variables, not stuff needed explicitly in each level or in the gameplay itself
 MAIN_MENU = MainMenu()  # "menu"
@@ -545,12 +658,15 @@ frame_timer = Stopwatch()
 def distance(pos1, pos2):
     return math.sqrt((pos2[0] - pos1[0])**2 + (pos2[1] - pos1[1])**2)
 
+
 def is_within_bounds(x, y):
     return 0 < x < WIDTH and 0 < y < HEIGHT
+
 
 def change_scene(scene_name):
     global current_scene
     current_scene = scenes[scene_name]
+
 
 def render_pass(display_screen):
     current_scene.draw_scene(display_screen)
@@ -568,6 +684,7 @@ def update_pass():
 
     current_scene.update_scene(events, keys)
 
+
 def game_init():
     pygame.display.set_caption("Zombie Shooter")
 
@@ -576,7 +693,7 @@ def game_loop():
     global running
 
     while running:
-        frame_timer.reset()
+        frame_timer.restart()
 
         # Updates
         update_pass()
