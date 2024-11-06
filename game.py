@@ -542,6 +542,8 @@ class World(Scene, ABC):
                         self.reset()
                     case pygame.K_ESCAPE:
                         change_scene("menu")
+                    case pygame.K_x:
+                        change_scene("death")
 
         # Spawn zombies when needed
         if self.spawn_timer.has_passed(2500):
@@ -601,13 +603,13 @@ class World(Scene, ABC):
 
 class DeathScreen(Scene, ABC):
 
-    def __init__(self, name, score):
-        super().__init__(name)
-        self.score = score
+    def __init__(self):
+        super().__init__("death")
+        self.score = 0
         self.restart_text = FONT.render("Press 'R' to Restart", True, WHITE)
         self.quit_text = FONT.render("Press 'Q' to Quit",True, WHITE)
         self.game_over = FONT.render("Game Over", True, RED)
-        self.score_text = FONT.render(f"Score: {self.score}")
+        self.score_text = FONT.render(f"Score: {self.score}", True, WHITE)
 
         self.game_over_rect = self.game_over.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
         self.score_rect = self.score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
@@ -633,19 +635,25 @@ class DeathScreen(Scene, ABC):
 
     def start_new_game(self):
         global current_scene
-        current_scene = World()
+        WORLD.reset()
+        change_scene("world")
+
+
+    def set_score(self, score):
+        self.score = score
+        self.score_text = FONT.render(f"Score: {self.score}", True, WHITE)
 
 
 # This Section is for game scenes and variables, not stuff needed explicitly in each level or in the gameplay itself
 MAIN_MENU = MainMenu()  # "menu"
 WORLD = World()         # "world"
-# DEATH = Death()       # "death"
+DEATH = DeathScreen()
 # death state not added yet lol
 
 scenes = {
     MAIN_MENU.name: MAIN_MENU,
-    WORLD.name: WORLD
-    # GAMEOVER.name : GAMEOVER
+    WORLD.name: WORLD,
+    DEATH.name: DEATH
 }
 
 
