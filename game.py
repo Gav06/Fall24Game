@@ -472,7 +472,6 @@ class World(Scene, ABC):
     ZOMBIE_LIMIT = 50
 
     # Debug/developer variables
-    should_spawn_zombies = True
     draw_tracer = False
 
     def __init__(self):
@@ -482,10 +481,19 @@ class World(Scene, ABC):
         self.spawn_timer = Stopwatch()
         self.zombie_count = 0
         self.kill_count = 0
-        # Each wave is 30 seconds (30,000ms)
+
+        self.should_spawn_zombies = False
+        """ Survival wave variables section """
+
+        # Each wave is 20 seconds (20000ms)
         self.wave_length = 20 * 1000
         self.wave_timer = Stopwatch()
         self.wave_countdown = Stopwatch()
+        self.wave_starting = False
+        self.should_start_next_wave = False
+
+        # Begin wave 1 when we start of course
+        self.set_start_wave()
 
 
     def draw_scene(self, display_screen):
@@ -523,8 +531,9 @@ class World(Scene, ABC):
         kill_counter = FONT_SMALL.render(f"Kills: {self.kill_count}", True, WHITE)
         display_screen.blit(kill_counter, (4, 28))
 
-        if self.wave_countdown.started:
-            countdown_text = FONT.render(f"Wave starting in {3000 - self.wave_countdown.elapsed_time()}ms...",
+        if self.wave_starting:
+            display_ms = round((3000 - self.wave_countdown.elapsed_time()) / 1000.0, 1)
+            countdown_text = FONT.render(f"Wave starting in {display_ms}s...",
                                          True, WHITE)
             display_screen.blit(countdown_text, (WIDTH / 2 - (countdown_text.get_width() / 2),
                                                  HEIGHT / 2 - (countdown_text.get_height() / 2)))
@@ -532,8 +541,17 @@ class World(Scene, ABC):
 
     def update_scene(self, events, keys):
         # initial start
-        if self.current_wave == 0:
-            self.start_next_wave()
+        if self.should_start_next_wave:
+            self.should_start_next_wave = False
+            self.wave_starting = True
+            self.wave_countdown.start()
+            pass
+
+        if self.wave_starting and self.wave_countdown.has_passed(3000):
+            self.wave_starting = False
+            self.current_wave += 1
+            self.should_spawn_zombies = True
+
 
         for event in events:
             if event.type == pygame.KEYDOWN:
@@ -596,12 +614,13 @@ class World(Scene, ABC):
         self.zombie_count += 1
 
 
-    def start_next_wave(self):
-        pass
+    def set_start_wave(self):
+        self.should_start_next_wave = True
 
 """ End World """
 
 class DeathScreen(Scene, ABC):
+
 
     def __init__(self):
         super().__init__("death")
@@ -615,15 +634,17 @@ class DeathScreen(Scene, ABC):
         self.score_rect = self.score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.restart_rect = self.restart_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
         self.quit_rect = self.quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
+
+
     def update_scene(self, events, keys):
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
-                    global current_scene
-                    current_scene = MainMenu()
+                    self.start_new_game()
                 elif event.key == pygame.K_q:
-                    pygame.quit()
-                    exit()
+                    global running
+                    running = False
+
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
@@ -632,6 +653,7 @@ class DeathScreen(Scene, ABC):
         display_screen.blit(self.score_text, self.score_rect)
         display_screen.blit(self.restart_text, self.restart_rect)
         display_screen.blit(self.quit_text, self.quit_rect)
+
 
     def start_new_game(self):
         global current_scene
