@@ -473,6 +473,8 @@ class World(Scene, ABC):
 
     # Debug/developer variables
     draw_tracer = False
+    # Wave is 20 seconds long
+    wave_length = 20 * 1000
 
     def __init__(self):
         super().__init__("world")
@@ -485,11 +487,13 @@ class World(Scene, ABC):
         self.should_spawn_zombies = False
         """ Survival wave variables section """
 
-        # Each wave is 20 seconds (20000ms)
-        self.wave_length = 20 * 1000
+        # timers
         self.wave_timer = Stopwatch()
         self.wave_countdown = Stopwatch()
+
+        # flag variables
         self.wave_starting = False
+        self.wave_active = False
         self.should_start_next_wave = False
 
         # Begin wave 1 when we start of course
@@ -532,25 +536,46 @@ class World(Scene, ABC):
         display_screen.blit(kill_counter, (4, 28))
 
         if self.wave_starting:
-            display_ms = round((3000 - self.wave_countdown.elapsed_time()) / 1000.0, 1)
-            countdown_text = FONT.render(f"Wave starting in {display_ms}s...",
+            countdown = round((3000 - self.wave_countdown.elapsed_time()) / 1000.0, 1)
+            countdown_text = FONT.render(f"Wave starting in {countdown}s...",
                                          True, WHITE)
             display_screen.blit(countdown_text, (WIDTH / 2 - (countdown_text.get_width() / 2),
                                                  HEIGHT / 2 - (countdown_text.get_height() / 2)))
+        elif self.wave_active:
+            wave_remaining = round((self.wave_length / 1000.0) - (self.wave_timer.elapsed_time() / 1000.0), 1)
+            remaining_text = FONT_SMALL.render(f"{wave_remaining} seconds left in wave {self.current_wave}", True, WHITE)
+            display_screen.blit(remaining_text, (WIDTH / 2 - (remaining_text.get_width() / 2), 4))
 
 
     def update_scene(self, events, keys):
         # initial start
+
+        # Begin countdown
         if self.should_start_next_wave:
             self.should_start_next_wave = False
             self.wave_starting = True
             self.wave_countdown.start()
-            pass
 
+        # Post countdown
         if self.wave_starting and self.wave_countdown.has_passed(3000):
+            self.wave_countdown.stop()
             self.wave_starting = False
             self.current_wave += 1
+
             self.should_spawn_zombies = True
+            self.wave_active = True
+
+            self.wave_timer.start()
+
+        # Post wave
+        if self.wave_active and self.wave_timer.has_passed(self.wave_length):
+            self.wave_active = False
+            self.wave_timer.stop()
+
+            self.should_spawn_zombies = False
+            self.game_objects.clear()
+
+            self.set_start_wave()
 
 
         for event in events:
@@ -563,8 +588,13 @@ class World(Scene, ABC):
                     case pygame.K_x:
                         change_scene("death")
 
+        # Calculate duration of our spawn delay based on what wave we are
+        n = (self.current_wave - 1) * 375
+        # The absolute shortest delay is 150 ms
+        delay = max(2000 - n, 150)
+
         # Spawn zombies when needed
-        if self.spawn_timer.has_passed(2500):
+        if self.spawn_timer.has_passed(delay):
             self.spawn_zombie_random()
             self.spawn_timer.restart()
 
@@ -666,16 +696,35 @@ class DeathScreen(Scene, ABC):
         self.score_text = FONT.render(f"Score: {self.score}", True, WHITE)
 
 
+class UpgradeScreen(Scene, ABC):
+
+    def __init__(self):
+        super().__init__("upgrades")
+
+
+    def update_scene(self, events, keys):
+        pass
+
+
+    def draw_scene(self, display_screen):
+        pass
+
+
+
+
+
 # This Section is for game scenes and variables, not stuff needed explicitly in each level or in the gameplay itself
 MAIN_MENU = MainMenu()  # "menu"
 WORLD = World()         # "world"
 DEATH = DeathScreen()
+UPGRADES = UpgradeScreen()
 # death state not added yet lol
 
 scenes = {
     MAIN_MENU.name: MAIN_MENU,
     WORLD.name: WORLD,
-    DEATH.name: DEATH
+    DEATH.name: DEATH,
+    UPGRADES.name: UPGRADES
 }
 
 
