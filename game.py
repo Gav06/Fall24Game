@@ -133,6 +133,8 @@ class Player(GameObject, ABC):
         if self.health <= 0.0:
             self.dead = True
 
+            global current_scene
+            current_scene = DeathScreen
         # Player move input
         dx = 0
         dy = 0
@@ -183,10 +185,6 @@ class Player(GameObject, ABC):
 
         pygame.mixer.Sound.play(SOUND_SHOOT, 0)
         current_scene.game_objects.append(Bullet(px, py, mx, my))
-
-
-    def on_death(self):
-        pass
 
 
     def on_hurt(self, zombie):
@@ -361,8 +359,8 @@ class MainMenu(Scene, ABC):
     star_count = 50
     star_list = [(random.randint(0, WIDTH), random.randint(0, HEIGHT * 3 // 4)) for _ in range(star_count)]
 
-    square1 = pygame.Rect(100, HEIGHT * 6 // 8, 70, 90)
-    square2 = pygame.Rect(100, HEIGHT * 6 // 8, 70, 90)
+    square1 = pygame.Rect(100, HEIGHT * 6 // 8, 80, 100)
+    square2 = pygame.Rect(100, HEIGHT * 6 // 8, 80, 100)
     square_distance = 90
     square_speed = 2
     chasing = True
@@ -384,9 +382,11 @@ class MainMenu(Scene, ABC):
     def __init__(self):
         super().__init__("menu")
         pygame.mixer.init()
+        self.image1_sound = pygame.mixer.Sound('assets/HelpMe.wav')   #IMPORT SOUND
         self.image2_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')
-        self.sound_playing = False
-        self.image2_sound.set_volume(0.75)
+        self.image1_playing = False
+        self.image2_playing = False
+        self.image2_sound.set_volume(0.65)
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
@@ -436,19 +436,23 @@ class MainMenu(Scene, ABC):
             if self.square1.x > WIDTH:
                 self.chasing = True
 
-    image2_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')   #IMPORT SOUND
-    sound_playing = False
     def play_sound(self):
-        if not self.sound_playing:
-            self.image2_sound.play(1)
-            self.sound_playing = True
+        if not self.image1_playing:
+            self.image1_sound.play(loops=1)
+            self.image1_playing = True
 
+        if not self.image2_playing:
+            self.image2_sound.play(loops=1)
+            self.image2_playing = True
 
     def stop_sound(self):
-        if self.sound_playing:
-            self.image2_sound.stop()
-            self.sound_playing = False
+        if self.image1_playing:
+            self.image1_sound.stop()
+            self.image1_playing = False
 
+        if self.image2_playing:
+            self.image2_sound.stop()
+            self.image2_playing = False
 
     def update_scene(self, events, keys):
         for event in events:
@@ -539,7 +543,6 @@ class World(Scene, ABC):
                     case pygame.K_ESCAPE:
                         change_scene("menu")
 
-
         # Spawn zombies when needed
         if self.spawn_timer.has_passed(2500):
             self.spawn_zombie_random()
@@ -598,15 +601,39 @@ class World(Scene, ABC):
 
 class DeathScreen(Scene, ABC):
 
-    def __init__(self, name):
+    def __init__(self, name, score):
         super().__init__(name)
+        self.score = score
+        self.restart_text = FONT.render("Press 'R' to Restart", True, WHITE)
+        self.quit_text = FONT.render("Press 'Q' to Quit",True, WHITE)
+        self.game_over = FONT.render("Game Over", True, RED)
+        self.score_text = FONT.render(f"Score: {self.score}")
 
+        self.game_over_rect = self.game_over.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        self.score_rect = self.score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        self.restart_rect = self.restart_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+        self.quit_rect = self.quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
     def update_scene(self, events, keys):
-        pass
-
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    global current_scene
+                    current_scene = MainMenu()
+                elif event.key == pygame.K_q:
+                    pygame.quit()
+                    exit()
 
     def draw_scene(self, display_screen):
-        pass
+        display_screen.fill(BLACK)
+
+        display_screen.blit(self.game_over, self.game_over_rect)
+        display_screen.blit(self.score_text, self.score_rect)
+        display_screen.blit(self.restart_text, self.restart_rect)
+        display_screen.blit(self.quit_text, self.quit_rect)
+
+    def start_new_game(self):
+        global current_scene
+        current_scene = World()
 
 
 # This Section is for game scenes and variables, not stuff needed explicitly in each level or in the gameplay itself
