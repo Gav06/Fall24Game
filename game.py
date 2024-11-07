@@ -22,6 +22,8 @@ pygame.init()
 WIDTH = 1280
 HEIGHT = 720
 
+game_score = 0
+
 PLAYER_SPEED = 5.0
 BULLET_SPEED = 20.0
 # Colors
@@ -38,6 +40,8 @@ FONT_SMALL = pygame.font.Font("assets/pokemonFont.ttf", 20)
 SOUND_SHOOT = pygame.mixer.Sound("assets/shoot2.wav")
 SOUND_DEATH = pygame.mixer.Sound("assets/death.wav")
 SOUND_HURT = pygame.mixer.Sound("assets/hurt.wav")
+SOUND_PLAYER_HURT = pygame.mixer.Sound("assets/player_hurt.wav")
+SOUND_WIN = pygame.mixer.Sound("assets/vicroy.wav")
 
 TAG_PLAYER = "player"
 TAG_ZOMBIE = "zombie"
@@ -72,7 +76,7 @@ class Stopwatch:
 
 
     def restart(self):
-        self.reset()
+        self.stop()
         self.start()
 
 
@@ -90,7 +94,7 @@ class GameObject:
         self.tag = tag
         self.rect = rect
         self.surface = surf
-        # the "dead" variable tells the game whether or not this gameObject should be deleted
+        # the "dead" variable tells the game whether this gameObject should be deleted
         self.dead = False
 
     # "target" parameter is going to be the screen, or whatever surface we will blit onto
@@ -118,6 +122,7 @@ class Player(GameObject, ABC):
         p_surf = pygame.transform.scale(p_surf, p_rect.size)
         self.health = 100.0
         self.hurt_timer = Stopwatch()
+        self.hurt_timer.start()
         super().__init__(p_rect, p_surf, TAG_PLAYER)
 
 
@@ -132,9 +137,7 @@ class Player(GameObject, ABC):
     def update(self, events, keys, scene):
         if self.health <= 0.0:
             self.dead = True
-
-            global current_scene
-            current_scene = DeathScreen
+            change_scene("death")
         # Player move input
         dx = 0
         dy = 0
@@ -188,12 +191,11 @@ class Player(GameObject, ABC):
 
 
     def on_hurt(self, zombie):
-        self.hurt_timer.start()
-
+        # Hurting the player
         if self.hurt_timer.has_passed(750):
-            self.health -= 20.0
-            pygame.mixer.Sound.play(SOUND_HURT, 0)
-            self.hurt_timer.stop()
+            self.health -= 12.5
+            pygame.mixer.Sound.play(SOUND_PLAYER_HURT, 0)
+            self.hurt_timer.restart()
 
 
 """
@@ -315,7 +317,6 @@ class Zombie(GameObject, ABC):
         # Move towards the player
         self.rect.move_ip(dx, dy)
 
-
         if self.rect.colliderect(player):
             player.on_hurt(self)
 
@@ -369,7 +370,7 @@ class MainMenu(Scene, ABC):
     square1_img_right = pygame.transform.scale(square1_img_right, (square1.width, square1.height))
     square1_img = square1_img_right  # Start with the right-facing image
 
-    square2_img_right = pygame.image.load("assets/Zombie_One.png").convert_alpha()
+    square2_img_right = pygame.image.load("assets/Zombie_1.png").convert_alpha()
     square2_img_right = pygame.transform.scale(square2_img_right, (square2.width, square2.height))
     square2_img = square2_img_right  # Start with right-facing image
 
@@ -501,7 +502,7 @@ class World(Scene, ABC):
 
 
     def draw_scene(self, display_screen):
-        global SHOW_DEBUG_HITBOXES, WHITE
+        global SHOW_DEBUG_HITBOXES, WHITE, game_score, WIDTH, HEIGHT
         # Backdrop
         display_screen.fill(BLACK)
 
@@ -523,18 +524,20 @@ class World(Scene, ABC):
 
             obj.render(display_screen)
 
-        # Draw overlays and stuff
+        """ User interface and overlay stuff """
 
         # Draw tracer line
         if self.draw_tracer:
             pygame.draw.line(display_screen, (196, 64, 64), self.player.rect.center, pygame.mouse.get_pos())
 
+        """ General stats """
         wave_counter = FONT_SMALL.render(f"Wave: {self.current_wave}", True, WHITE)
         display_screen.blit(wave_counter, (4, 4))
 
         kill_counter = FONT_SMALL.render(f"Kills: {self.kill_count}", True, WHITE)
         display_screen.blit(kill_counter, (4, 28))
 
+        """ Wave indicators """
         if self.wave_starting:
             countdown = round((3000 - self.wave_countdown.elapsed_time()) / 1000.0, 1)
             countdown_text = FONT.render(f"Wave starting in {countdown}s...",
@@ -546,20 +549,35 @@ class World(Scene, ABC):
             remaining_text = FONT_SMALL.render(f"{wave_remaining} seconds left in wave {self.current_wave}", True, WHITE)
             display_screen.blit(remaining_text, (WIDTH / 2 - (remaining_text.get_width() / 2), 4))
 
+        """ Health and score points """
+        score_text = FONT_SMALL.render(f"Score: {game_score}", True, WHITE)
+        display_screen.blit(score_text, (4, HEIGHT - score_text.get_height() - 4))
+
+        health = self.player.health
+        red = ((100.0 - health) / 100.0) * 255
+        green = (health / 100.0) * 255
+        health_text = FONT_SMALL.render(f"Health: {health}", True, (int(red), int(green), 0))
+        display_screen.blit(health_text, (4, HEIGHT - 8 - score_text.get_height() - health_text.get_height()))
+
 
     def update_scene(self, events, keys):
         # initial start
 
         # Begin countdown
         if self.should_start_next_wave:
+            if self.current_wave > 0:
+                pygame.mixer.Sound.play(SOUND_WIN, 0)
+
             self.should_start_next_wave = False
             self.wave_starting = True
             self.wave_countdown.start()
 
         # Post countdown
         if self.wave_starting and self.wave_countdown.has_passed(3000):
+
             self.wave_countdown.stop()
             self.wave_starting = False
+
             self.current_wave += 1
 
             self.should_spawn_zombies = True
@@ -590,8 +608,9 @@ class World(Scene, ABC):
 
         # Calculate duration of our spawn delay based on what wave we are
         n = (self.current_wave - 1) * 375
+        r = (random.random() * 100.0)
         # The absolute shortest delay is 150 ms
-        delay = max(2000 - n, 150)
+        delay = max(r + 2000 - n, 250)
 
         # Spawn zombies when needed
         if self.spawn_timer.has_passed(delay):
@@ -651,14 +670,14 @@ class World(Scene, ABC):
 
 class DeathScreen(Scene, ABC):
 
-
     def __init__(self):
         super().__init__("death")
-        self.score = 0
         self.restart_text = FONT.render("Press 'R' to Restart", True, WHITE)
         self.quit_text = FONT.render("Press 'Q' to Quit",True, WHITE)
         self.game_over = FONT.render("Game Over", True, RED)
-        self.score_text = FONT.render(f"Score: {self.score}", True, WHITE)
+
+        global game_score
+        self.score_text = FONT.render(f"Score: {game_score}", True, WHITE)
 
         self.game_over_rect = self.game_over.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
         self.score_rect = self.score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
@@ -708,9 +727,6 @@ class UpgradeScreen(Scene, ABC):
 
     def draw_scene(self, display_screen):
         pass
-
-
-
 
 
 # This Section is for game scenes and variables, not stuff needed explicitly in each level or in the gameplay itself
