@@ -33,8 +33,11 @@ RED = (255, 0, 0)
 GRASS_GREEN = (60, 179, 113)
 # Init pygame and our font
 pygame.init()
+
 FONT = pygame.font.Font("assets/pokemonFont.ttf", 32)
 FONT_SMALL = pygame.font.Font("assets/pokemonFont.ttf", 20)
+# Used for score points and stuff
+FONT_TINY = pygame.font.Font("assets/pokemonFont.ttf", 12)
 
 # Sound effects
 SOUND_SHOOT = pygame.mixer.Sound("assets/shoot2.wav")
@@ -42,6 +45,7 @@ SOUND_DEATH = pygame.mixer.Sound("assets/death.wav")
 SOUND_HURT = pygame.mixer.Sound("assets/hurt.wav")
 SOUND_PLAYER_HURT = pygame.mixer.Sound("assets/player_hurt.wav")
 SOUND_WIN = pygame.mixer.Sound("assets/vicroy.wav")
+SOUND_SCORE_ADD = pygame.mixer.Sound("assets/score_add.wav")
 
 TAG_PLAYER = "player"
 TAG_ZOMBIE = "zombie"
@@ -135,8 +139,11 @@ class Player(GameObject, ABC):
 
 
     def update(self, events, keys, scene):
+        global game_score
+
         if self.health <= 0.0:
             self.dead = True
+            DEATH.set_score(game_score)
             change_scene("death")
         # Player move input
         dx = 0
@@ -326,6 +333,9 @@ class Zombie(GameObject, ABC):
             self.shot = True
             self.death_stopwatch.start()
 
+            if type(current_scene) is World:
+                current_scene.score_queue.append(50)
+
         pygame.mixer.Sound.play(SOUND_HURT, 0)
 
     def on_death(self):
@@ -489,6 +499,8 @@ class World(Scene, ABC):
         """ Survival wave variables section """
 
         # timers
+        self.score_add_delay = Stopwatch()
+
         self.wave_timer = Stopwatch()
         self.wave_countdown = Stopwatch()
 
@@ -499,6 +511,8 @@ class World(Scene, ABC):
 
         # Begin wave 1 when we start of course
         self.set_start_wave()
+
+        self.score_queue = []
 
 
     def draw_scene(self, display_screen):
@@ -523,6 +537,7 @@ class World(Scene, ABC):
                 display_screen.blit(hitbox, (obj.rect.x - 1, obj.rect.y - 1))
 
             obj.render(display_screen)
+
 
         """ User interface and overlay stuff """
 
@@ -550,23 +565,45 @@ class World(Scene, ABC):
             display_screen.blit(remaining_text, (WIDTH / 2 - (remaining_text.get_width() / 2), 4))
 
         """ Health and score points """
-        score_text = FONT_SMALL.render(f"Score: {game_score}", True, WHITE)
-        display_screen.blit(score_text, (4, HEIGHT - score_text.get_height() - 4))
 
         health = self.player.health
         red = ((100.0 - health) / 100.0) * 255
         green = (health / 100.0) * 255
         health_text = FONT_SMALL.render(f"Health: {health}", True, (int(red), int(green), 0))
-        display_screen.blit(health_text, (4, HEIGHT - 8 - score_text.get_height() - health_text.get_height()))
+        display_screen.blit(health_text, (4, HEIGHT - 4 - health_text.get_height()))
+
+        score_text = FONT_SMALL.render(f"Score: {game_score}", True, WHITE)
+        display_screen.blit(score_text, (4, HEIGHT - score_text.get_height() - health_text.get_height() - 8))
+
+        y_offset = 0
+        for i in range(len(self.score_queue)):
+            score = self.score_queue[i]
+            text = FONT_SMALL.render(f"+{score}", True, (255, 0, 0))
+            display_screen.blit(text, (4, HEIGHT - score_text.get_height() - health_text.get_height() - text.get_height() - 12 - y_offset))
+            y_offset += (4 + text.get_height())
 
 
     def update_scene(self, events, keys):
+        global game_score
+
         # initial start
+
+        # Score counting
+        if len(self.score_queue) != 0:
+            self.score_add_delay.start()
+
+            delay = max(750 - (len(self.score_queue) * 25), 100)
+            if self.score_add_delay.has_passed(delay):
+                pygame.mixer.Sound.play(SOUND_SCORE_ADD, 0)
+                game_score += self.score_queue[0]
+                self.score_queue.pop(0)
+                self.score_add_delay.stop()
 
         # Begin countdown
         if self.should_start_next_wave:
             if self.current_wave > 0:
                 pygame.mixer.Sound.play(SOUND_WIN, 0)
+                current_scene.score_queue.append(1000)
 
             self.should_start_next_wave = False
             self.wave_starting = True
