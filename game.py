@@ -39,24 +39,27 @@ FONT_SMALL = pygame.font.Font("assets/pokemonFont.ttf", 20)
 # Used for score points and stuff
 FONT_TINY = pygame.font.Font("assets/pokemonFont.ttf", 12)
 
+BACKDROP = pygame.image.load("assets/background.png")
+BACKDROP = pygame.transform.scale(BACKDROP, (WIDTH, HEIGHT))
+
 # Sound effects
 SOUND_SHOOT = pygame.mixer.Sound("assets/shoot2.wav")
 SOUND_DEATH = pygame.mixer.Sound("assets/death.wav")
 SOUND_HURT = pygame.mixer.Sound("assets/hurt.wav")
 SOUND_PLAYER_HURT = pygame.mixer.Sound("assets/player_hurt.wav")
 SOUND_WIN = pygame.mixer.Sound("assets/vicroy.wav")
-SOUND_SCORE_ADD = pygame.mixer.Sound("assets/score_add.wav")
+SOUND_SCORE_ADD = pygame.mixer.Sound("assets/score_add2.wav")
 
 TAG_PLAYER = "player"
 TAG_ZOMBIE = "zombie"
 TAG_BULLET = "bullet"
 
 # Pygame constants
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SRCALPHA)
 clock = pygame.time.Clock()
 
 # When true, draws debug hitboxes around all characters
-SHOW_DEBUG_HITBOXES = False
+show_debug_hitboxes = False
 
 # Used for animations and stuff
 class Stopwatch:
@@ -122,12 +125,12 @@ class Player(GameObject, ABC):
 
     def __init__(self):
         p_rect = pygame.Rect(WIDTH // 2 - 20 // 2, HEIGHT // 2 - 20 // 2, 24, 48)
-        p_surf = pygame.image.load("assets/Chardle_Small.png").convert_alpha()
-        p_surf = pygame.transform.scale(p_surf, p_rect.size)
+        self.p_surf = pygame.image.load("assets/Chardle_Small.png").convert_alpha()
+        self.p_surf = pygame.transform.scale(self.p_surf, p_rect.size)
         self.health = 100.0
         self.hurt_timer = Stopwatch()
         self.hurt_timer.start()
-        super().__init__(p_rect, p_surf, TAG_PLAYER)
+        super().__init__(p_rect, self.p_surf, TAG_PLAYER)
 
 
     def render(self, display_screen):
@@ -177,6 +180,10 @@ class Player(GameObject, ABC):
                 self.shoot(screen_pos[0], screen_pos[1])
 
 
+        if self.hurt_timer.has_passed(250):
+            self.surface = self.p_surf
+
+
     # Fires a projectile with the current load-out towards the current position
     def shoot(self, x, y):
         # Bullet mathematics
@@ -197,12 +204,18 @@ class Player(GameObject, ABC):
         current_scene.game_objects.append(Bullet(px, py, mx, my))
 
 
+
     def on_hurt(self, zombie):
         # Hurting the player
         if self.hurt_timer.has_passed(750):
             self.health -= 12.5
             pygame.mixer.Sound.play(SOUND_PLAYER_HURT, 0)
             self.hurt_timer.restart()
+
+            red = pygame.Surface(self.rect.size)
+            red.fill(RED)
+            self.surface = red
+
 
 
 """
@@ -261,13 +274,15 @@ class Bullet(GameObject, ABC):
 
 class Zombie(GameObject, ABC):
 
-    shot = False
     movement_speed = 3.5
 
     def __init__(self, x, y):
-        z_rect = pygame.Rect(x, y, 20, 20)
-        z_surf = pygame.Surface(z_rect.size)
-        z_surf.fill((32, 255, 32))
+        self.zomb_type = random.randint(1, 4)
+        w = 40 if self.zomb_type != 4 else 90
+        h = 60 if self.zomb_type != 4 else 90
+        z_rect = pygame.Rect(x, y, w, h)
+        z_surf = pygame.image.load(f"assets/Zombie_{self.zomb_type}.png").convert_alpha()
+        z_surf = pygame.transform.scale(z_surf, z_rect.size)
 
         super().__init__(z_rect, z_surf, TAG_ZOMBIE)
 
@@ -276,6 +291,11 @@ class Zombie(GameObject, ABC):
         # Typically either 1 or -1 or 0
         self.x_dir = 0
         self.y_dir = 0
+
+        self.shot = False
+
+        # 1-5 are normal, 6 is big zombie
+
 
 
     def render(self, display_screen):
@@ -342,6 +362,7 @@ class Zombie(GameObject, ABC):
         pygame.mixer.Sound.play(SOUND_DEATH, 0)
         if type(current_scene) == World:
             current_scene.kill_count += 1
+            current_scene.zombie_count -= 1
         pass
 
 
@@ -487,6 +508,9 @@ class World(Scene, ABC):
     # Wave is 20 seconds long
     wave_length = 20 * 1000
 
+    dimming = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    dimming.fill((0, 0, 0, 64))
+
     def __init__(self):
         super().__init__("world")
         self.player = Player()
@@ -516,12 +540,14 @@ class World(Scene, ABC):
 
 
     def draw_scene(self, display_screen):
-        global SHOW_DEBUG_HITBOXES, WHITE, game_score, WIDTH, HEIGHT
+        global show_debug_hitboxes, WHITE, game_score, WIDTH, HEIGHT
         # Backdrop
-        display_screen.fill(BLACK)
+        display_screen.blit(BACKDROP, (0, 0))
+
+        display_screen.blit(self.dimming, (0, 0))
 
         # Player hitbox (if applicable)
-        if SHOW_DEBUG_HITBOXES:
+        if show_debug_hitboxes:
             player_box = pygame.Surface(self.player.rect.size)
             player_box.fill((255, 0, 255))
             display_screen.blit(player_box, self.player.rect.topleft)
@@ -531,7 +557,7 @@ class World(Scene, ABC):
 
         # Draw zombies and bullets
         for obj in self.game_objects:
-            if SHOW_DEBUG_HITBOXES:
+            if show_debug_hitboxes:
                 hitbox = pygame.Surface((obj.rect.w + 2, obj.rect.h + 2))
                 hitbox.fill((255, 0, 0))
                 display_screen.blit(hitbox, (obj.rect.x - 1, obj.rect.y - 1))
@@ -554,13 +580,13 @@ class World(Scene, ABC):
 
         """ Wave indicators """
         if self.wave_starting:
-            countdown = round((3000 - self.wave_countdown.elapsed_time()) / 1000.0, 1)
+            countdown = max(0.0, round((3000 - self.wave_countdown.elapsed_time()) / 1000.0, 1))
             countdown_text = FONT.render(f"Wave starting in {countdown}s...",
                                          True, WHITE)
             display_screen.blit(countdown_text, (WIDTH / 2 - (countdown_text.get_width() / 2),
                                                  HEIGHT / 2 - (countdown_text.get_height() / 2)))
         elif self.wave_active:
-            wave_remaining = round((self.wave_length / 1000.0) - (self.wave_timer.elapsed_time() / 1000.0), 1)
+            wave_remaining = max(0.0, round((self.wave_length / 1000.0) - (self.wave_timer.elapsed_time() / 1000.0), 1))
             remaining_text = FONT_SMALL.render(f"{wave_remaining} seconds left in wave {self.current_wave}", True, WHITE)
             display_screen.blit(remaining_text, (WIDTH / 2 - (remaining_text.get_width() / 2), 4))
 
@@ -584,7 +610,7 @@ class World(Scene, ABC):
 
 
     def update_scene(self, events, keys):
-        global game_score
+        global game_score, show_debug_hitboxes
 
         # initial start
 
@@ -592,9 +618,9 @@ class World(Scene, ABC):
         if len(self.score_queue) != 0:
             self.score_add_delay.start()
 
-            delay = max(750 - (len(self.score_queue) * 25), 100)
+            delay = max(750 - (len(self.score_queue) * 50), 100)
             if self.score_add_delay.has_passed(delay):
-                pygame.mixer.Sound.play(SOUND_SCORE_ADD, 0)
+                # pygame.mixer.Sound.play(SOUND_SCORE_ADD, 0)
                 game_score += self.score_queue[0]
                 self.score_queue.pop(0)
                 self.score_add_delay.stop()
@@ -642,12 +668,14 @@ class World(Scene, ABC):
                         change_scene("menu")
                     case pygame.K_x:
                         change_scene("death")
+                    case pygame.K_h:
+                        show_debug_hitboxes = not show_debug_hitboxes
 
         # Calculate duration of our spawn delay based on what wave we are
-        n = (self.current_wave - 1) * 375
-        r = (random.random() * 100.0)
-        # The absolute shortest delay is 150 ms
-        delay = max(r + 2000 - n, 250)
+        n = (self.current_wave - 1) * 500
+        r = (random.random() * 250.0)
+        # The absolute shortest delay is 100 ms
+        delay = max(r + 2000 - n, 100)
 
         # Spawn zombies when needed
         if self.spawn_timer.has_passed(delay):
