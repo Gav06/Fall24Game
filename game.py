@@ -430,11 +430,11 @@ class MainMenu(Scene, ABC):
     def __init__(self):
         super().__init__("menu")
         pygame.mixer.init()
-        '''self.image1_sound = pygame.mixer.Sound('assets/HelpMe.wav')   #IMPORT SOUND
-        self.image2_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')
-        self.image1_playing = False
-        self.image2_playing = False
-        self.image2_sound.set_volume(0.65)'''
+        #self.image1_sound = pygame.mixer.Sound('assets/HelpMe.wav')   #IMPORT SOUND
+        #self.image2_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')
+        #self.image1_playing = False
+        #self.image2_playing = False
+        #self.image2_sound.set_volume(0.65)
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
@@ -455,10 +455,10 @@ class MainMenu(Scene, ABC):
         display_screen.blit(self.square1_img, self.square1)
         display_screen.blit(self.square2_img, self.square2)
 
-        #if self.square2.colliderect(quarter_rect):
-        #    self.play_sound()
-        #else:
-        #    self.stop_sound()
+       # if self.square2.colliderect(quarter_rect):
+           # self.play_sound()
+       # else:
+           # self.stop_sound()
 
         display_screen.blit(self.title_text, self.title_rect)
         display_screen.blit(self.start_text, self.start_rect)
@@ -781,13 +781,13 @@ class DeathScreen(Scene, ABC):
         self.quit_rect = self.quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
 
         pygame.mixer.init()
-        self.zombie_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')
+        self.zombie_sound = pygame.mixer.Sound('assets/Horror Scary Ghost Sound Effects.wav')
         self.zombie_sound.set_volume(0.5)
         self.zombie_playing = False
 
     def start_scene(self):
         if not self.zombie_playing:
-            self.zombie_sound.play(loops= 1)
+            self.zombie_sound.play(loops=1)
             self.zombie_playing = True
 
     def update_scene(self, events, keys):
@@ -798,6 +798,7 @@ class DeathScreen(Scene, ABC):
                 elif event.key == pygame.K_q:
                     global running
                     running = False  # Quit the game
+        self.start_scene()
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
@@ -815,10 +816,13 @@ class DeathScreen(Scene, ABC):
         global current_scene
         WORLD.reset()
         change_scene("world")
-        self.stop_sound()
+        pygame.mixer.stop()
 
     def set_score(self, score):
         self.score_text = FONT.render(f"Score: {score}", True, WHITE)
+
+    def reset_sound(self):
+        self.zombie_playing = False
 
 class UpgradeScreen(Scene, ABC):
 
@@ -897,6 +901,12 @@ def is_within_bounds(x, y):
 def change_scene(scene_name):
     global current_scene
     current_scene = scenes[scene_name]
+    if isinstance(current_scene, DeathScreen):
+        current_scene.reset_sound()
+        current_scene.start_scene()
+    else:
+        if hasattr(current_scene, 'stop_sound'):
+            current_scene.stop_sound()
 
 
 def render_pass(display_screen):
