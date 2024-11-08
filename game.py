@@ -430,11 +430,11 @@ class MainMenu(Scene, ABC):
     def __init__(self):
         super().__init__("menu")
         pygame.mixer.init()
-        self.image1_sound = pygame.mixer.Sound('assets/HelpMe.wav')   #IMPORT SOUND
+        '''self.image1_sound = pygame.mixer.Sound('assets/HelpMe.wav')   #IMPORT SOUND
         self.image2_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')
         self.image1_playing = False
         self.image2_playing = False
-        self.image2_sound.set_volume(0.65)
+        self.image2_sound.set_volume(0.65)'''
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
@@ -455,10 +455,10 @@ class MainMenu(Scene, ABC):
         display_screen.blit(self.square1_img, self.square1)
         display_screen.blit(self.square2_img, self.square2)
 
-        if self.square2.colliderect(quarter_rect):
-            self.play_sound()
-        else:
-            self.stop_sound()
+        #if self.square2.colliderect(quarter_rect):
+        #    self.play_sound()
+        #else:
+        #    self.stop_sound()
 
         display_screen.blit(self.title_text, self.title_rect)
         display_screen.blit(self.start_text, self.start_rect)
@@ -484,30 +484,30 @@ class MainMenu(Scene, ABC):
             if self.square1.x > WIDTH:
                 self.chasing = True
 
-    def play_sound(self):
-        if not self.image1_playing:
-            self.image1_sound.play(loops=1)
-            self.image1_playing = True
+    # def play_sound(self):
+     #   if not self.image1_playing:
+      #      self.image1_sound.play(loops=1)
+      #      self.image1_playing = True
 
-        if not self.image2_playing:
-            self.image2_sound.play(loops=1)
-            self.image2_playing = True
+#        if not self.image2_playing:
+ #           self.image2_sound.play(loops=1)
+  #          self.image2_playing = True
 
-    def stop_sound(self):
-        if self.image1_playing:
-            self.image1_sound.stop()
-            self.image1_playing = False
+   # def stop_sound(self):
+    #    if self.image1_playing:
+     #       self.image1_sound.stop()
+      #      self.image1_playing = False
 
-        if self.image2_playing:
-            self.image2_sound.stop()
-            self.image2_playing = False
+       # if self.image2_playing:
+        #    self.image2_sound.stop()
+         #   self.image2_playing = False
 
     def update_scene(self, events, keys):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.start_rect.collidepoint(event.pos):
                     # Switch to level
-                    self.stop_sound()
+                  #  self.stop_sound()
                     change_scene("world")
 
 """ End Main Menu """
@@ -763,12 +763,13 @@ class World(Scene, ABC):
 
 """ End World """
 
+
 class DeathScreen(Scene, ABC):
 
     def __init__(self):
         super().__init__("death")
         self.restart_text = FONT.render("Press 'R' to Restart", True, WHITE)
-        self.quit_text = FONT.render("Press 'Q' to Quit",True, WHITE)
+        self.quit_text = FONT.render("Press 'Q' to Quit", True, WHITE)
         self.game_over = FONT.render("Game Over", True, RED)
 
         global game_score
@@ -779,35 +780,45 @@ class DeathScreen(Scene, ABC):
         self.restart_rect = self.restart_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
         self.quit_rect = self.quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
 
+        pygame.mixer.init()
+        self.zombie_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')
+        self.zombie_sound.set_volume(0.5)
+        self.zombie_playing = False
+
+    def start_scene(self):
+        if not self.zombie_playing:
+            self.zombie_sound.play(loops= 1)
+            self.zombie_playing = True
 
     def update_scene(self, events, keys):
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
-                    self.start_new_game()
+                    self.start_new_game()  # Restart the game
                 elif event.key == pygame.K_q:
                     global running
-                    running = False
-
+                    running = False  # Quit the game
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
-
         display_screen.blit(self.game_over, self.game_over_rect)
         display_screen.blit(self.score_text, self.score_rect)
         display_screen.blit(self.restart_text, self.restart_rect)
         display_screen.blit(self.quit_text, self.quit_rect)
 
+    def stop_sound(self):
+        if self.zombie_playing:
+            self.zombie_sound.stop()
+            self.zombie_playing = False
 
     def start_new_game(self):
         global current_scene
         WORLD.reset()
         change_scene("world")
-
+        self.stop_sound()
 
     def set_score(self, score):
         self.score_text = FONT.render(f"Score: {score}", True, WHITE)
-
 
 class UpgradeScreen(Scene, ABC):
 
