@@ -26,7 +26,7 @@ HEIGHT = 720
 game_score = 0
 
 PLAYER_SPEED = 5.0
-BULLET_SPEED = 20.0
+BULLET_SPEED = 30.0
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -63,6 +63,7 @@ SOUND_PLAYER_HURT = pygame.mixer.Sound("assets/player_hurt.wav")
 SOUND_WIN = pygame.mixer.Sound("assets/vicroy.wav")
 SOUND_SCORE_ADD = pygame.mixer.Sound("assets/score_add2.wav")
 SOUND_CHEAT_ENABLE = pygame.mixer.Sound("assets/cheat.wav")
+SOUND_UPGRADE = pygame.mixer.Sound("assets/upgrade.wav")
 
 TAG_PLAYER = "player"
 TAG_ZOMBIE = "zombie"
@@ -143,6 +144,9 @@ class Player(GameObject, ABC):
         self.health = 100.0
         self.hurt_timer = Stopwatch()
         self.hurt_timer.start()
+        # Timer for bullet sounds, so they don't overplay when full auto is used
+        self.sound_timer = Stopwatch()
+        self.sound_timer.start()
         super().__init__(p_rect, self.p_surf, TAG_PLAYER)
 
 
@@ -187,9 +191,14 @@ class Player(GameObject, ABC):
 
         self.rect.move_ip(dx, dy)
 
-        for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                screen_pos = event.pos
+        if not WORLD.full_auto_enabled:
+            for event in events:
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    screen_pos = event.pos
+                    self.shoot(screen_pos[0], screen_pos[1])
+        else:
+            if pygame.mouse.get_pressed()[0]:
+                screen_pos = pygame.mouse.get_pos()
                 self.shoot(screen_pos[0], screen_pos[1])
 
 
@@ -213,7 +222,10 @@ class Player(GameObject, ABC):
         mx = (dx / h) * BULLET_SPEED
         my = (dy / h) * BULLET_SPEED
 
-        SOUND_SHOOT.play(0)
+        if self.sound_timer.has_passed(75):
+            SOUND_SHOOT.play(0)
+            self.sound_timer.restart()
+
         current_scene.game_objects.append(Bullet(px, py, mx, my, WORLD.ricochet_enabled))
 
 
@@ -242,7 +254,7 @@ especially at diagonal angles.
 class Bullet(GameObject, ABC):
     def __init__(self, x, y, motion_x: float, motion_y: float, has_ricochet = False):
         self.size = 5
-        self.has_ricochet = True
+        self.has_ricochet = has_ricochet
 
         b_rect = pygame.Rect(x, y, self.size, self.size)
         b_surf = pygame.Surface(b_rect.size)
@@ -331,9 +343,6 @@ class Zombie(GameObject, ABC):
         # We face
         self.facing_right = True
 
-        # 1-5 are normal, 6 is big zombie
-
-
 
     def render(self, display_screen):
         super().render(display_screen)
@@ -385,8 +394,9 @@ class Zombie(GameObject, ABC):
         if self.rect.colliderect(player):
             player.on_hurt(self)
 
+
     def on_shot(self):
-        if self.hurt_cooldown.has_passed(500):
+        if self.hurt_cooldown.has_passed(100):
             self.hits_taken += 1
             self.hurt_cooldown.restart()
             if not self.shot and self.max_hits <= self.hits_taken:
@@ -395,16 +405,18 @@ class Zombie(GameObject, ABC):
                 self.death_stopwatch.start()
 
                 if type(current_scene) is World:
-                    current_scene.score_queue.append(50)
-
+                    current_scene.score_queue.append(50 if self.zomb_type != 4 else 100)
         SOUND_HURT.play(0)
+
 
     def on_death(self):
         SOUND_DEATH.play(0)
         if type(current_scene) == World:
+            if WORLD.vamp_enabled:
+                WORLD.player.health = min(WORLD.player.health + 0.1, 100.0)
+
             current_scene.kill_count += 1
             current_scene.zombie_count -= 1
-        pass
 
 
 # Our class for each scene.
@@ -542,7 +554,7 @@ class MainMenu(Scene, ABC):
 class World(Scene, ABC):
 
     # Hard zombie limit, to prevent lag or whatever
-    ZOMBIE_LIMIT = 50
+    ZOMBIE_LIMIT = 75
 
     # Debug/developer variables
     draw_tracer = False
@@ -731,7 +743,7 @@ class World(Scene, ABC):
                         change_scene("menu")
 
         # Calculate duration of our spawn delay based on what wave we are
-        n = (self.current_wave - 1) * 250
+        n = self.current_wave * 375
         # The absolute shortest delay is 100 ms
         delay = max(2500 - n, 50)
 
@@ -865,13 +877,30 @@ class UpgradeScreen(Scene, ABC):
         self.buy_upgrades_text = FONT_SMALL.render("Buy upgrades:", True, WHITE)
 
         self.auto_rect = None
+        self.vamp_rect = None
+        self.ricochet_rect = None
 
 
     def update_scene(self, events, keys):
+        global game_score
+
         for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN and self.next_wave_rect.collidepoint(event.pos):
-                change_scene("world")
-                WORLD.set_start_wave()
+            if event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed(num_buttons=3)[0]:
+                if self.next_wave_rect.collidepoint(event.pos):
+                    change_scene("world")
+                    WORLD.set_start_wave()
+                elif self.auto_rect.collidepoint(event.pos) and game_score >= 5000:
+                    WORLD.full_auto_enabled = True
+                    game_score -= 5000
+                    SOUND_UPGRADE.play(0)
+                elif self.vamp_rect.collidepoint(event.pos) and game_score >= 10000:
+                    WORLD.vamp_enabled = True
+                    game_score -= 10000
+                    SOUND_UPGRADE.play(0)
+                elif self.ricochet_rect.collidepoint(event.pos) and game_score >= 15000:
+                    WORLD.ricochet_enabled = True
+                    game_score -= 15000
+                    SOUND_UPGRADE.play(0)
 
         pass
 
@@ -896,11 +925,53 @@ class UpgradeScreen(Scene, ABC):
                             )
         )
 
+        """ The following code is pretty stupid, don't recommend viewing """
 
         # Full auto upgrade button
-        
+        text_color = (255, 0, 0)
+        if WORLD.full_auto_enabled:
+            text_color = (0, 255, 0)
+        elif game_score >= 5000:
+            text_color = (96, 128, 96)
 
-        auto_text = FONT.render("Full auto upgrade - 5000 pts", True)
+        auto_text = FONT.render("Full auto upgrade - 5000 pts", True, text_color)
+        a_x = (WIDTH / 2) - (auto_text.get_width() / 2)
+        a_y = 140
+        if self.auto_rect is None:
+            self.auto_rect = pygame.Rect(a_x, a_y, auto_text.get_width(), auto_text.get_height())
+        display_screen.blit(auto_text, (a_x, a_y))
+
+        # Vampire upgrade button
+
+        text_color = (255, 0, 0)
+        if WORLD.vamp_enabled:
+            text_color = (0, 255, 0)
+        elif game_score >= 10000:
+            text_color = (96, 128, 96)
+
+        vamp_text = FONT.render("Vampire upgrade - 10000 pts", True, text_color)
+        v_x = (WIDTH / 2) - (vamp_text.get_width() / 2)
+        v_y = 240
+        if self.vamp_rect is None:
+            self.vamp_rect = pygame.Rect(v_x, v_y, vamp_text.get_width(), vamp_text.get_height())
+
+        display_screen.blit(vamp_text, (v_x, v_y))
+
+        # Ricochet upgrade button
+
+        text_color = (255, 0, 0)
+        if WORLD.ricochet_enabled:
+            text_color = (0, 255, 0)
+        elif game_score >= 15000:
+            text_color = (96, 128, 96)
+
+        ricochet_text = FONT.render("Ricochet upgrade - 15000 pts", True, text_color)
+        r_x = (WIDTH / 2) - (ricochet_text.get_width() / 2)
+        r_y = 340
+        if self.ricochet_rect is None:
+            self.ricochet_rect = pygame.Rect(r_x, r_y, ricochet_text.get_width(), ricochet_text.get_height())
+
+        display_screen.blit(ricochet_text, (r_x, r_y))
 
 
 
