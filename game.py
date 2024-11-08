@@ -214,7 +214,7 @@ class Player(GameObject, ABC):
         my = (dy / h) * BULLET_SPEED
 
         SOUND_SHOOT.play(0)
-        current_scene.game_objects.append(Bullet(px, py, mx, my))
+        current_scene.game_objects.append(Bullet(px, py, mx, my, WORLD.ricochet_enabled))
 
 
 
@@ -240,8 +240,9 @@ Before this change the aiming was terribly imprecise,
 especially at diagonal angles.
 """
 class Bullet(GameObject, ABC):
-    def __init__(self, x, y, motion_x: float, motion_y: float):
+    def __init__(self, x, y, motion_x: float, motion_y: float, has_ricochet = False):
         self.size = 5
+        self.has_ricochet = True
 
         b_rect = pygame.Rect(x, y, self.size, self.size)
         b_surf = pygame.Surface(b_rect.size)
@@ -252,6 +253,8 @@ class Bullet(GameObject, ABC):
 
         self.motion_x = motion_x
         self.motion_y = motion_y
+
+        self.times_bounced = 0
 
         super().__init__(b_rect, b_surf, TAG_BULLET)
 
@@ -265,21 +268,36 @@ class Bullet(GameObject, ABC):
         self.pos_y += self.motion_y
 
         if not is_within_bounds(self.pos_x, self.pos_y):
-            self.dead = True
-            return
+            if self.has_ricochet:
+                self.bounce()
+            else:
+                self.dead = True
 
+        if self.times_bounced >= 3:
+            self.dead = True
+
+        self.rect = pygame.Rect(self.pos_x - 2.5, self.pos_y - 2.5, 5.0, 5.0)
         # Loop through each zombie to see if we hit and kill
         for obj in scene.game_objects:
             if obj.tag != TAG_ZOMBIE:
                 continue
 
-            if obj.rect.collidepoint(self.pos_x, self.pos_y):
-                # Kill zombie
-                obj.on_shot()
-                # Kill bullet
-                self.dead = True
-                break
+            if self.has_ricochet:
+                if obj.rect.colliderect(self.rect):
+                    self.bounce()
+                    obj.on_shot()
+            else:
+                if obj.rect.collidepoint(self.pos_x, self.pos_y):
+                    # Kill zombie
+                    obj.on_shot()
+                    # Kill bullet
+                    self.dead = True
+                    break
 
+    def bounce(self):
+        self.times_bounced += 1
+        self.motion_x *= -1
+        self.motion_y *= -1
 
     def on_death(self):
         pass
@@ -291,6 +309,7 @@ class Zombie(GameObject, ABC):
 
     def __init__(self, x, y):
         self.zomb_type = random.randint(1, 4)
+        self.max_hits = 1 if self.zomb_type != 4 else 2
         w = 40 if self.zomb_type != 4 else 90
         h = 60 if self.zomb_type != 4 else 90
         z_rect = pygame.Rect(x, y, w, h)
@@ -300,12 +319,15 @@ class Zombie(GameObject, ABC):
         super().__init__(z_rect, z_surf, TAG_ZOMBIE)
 
         self.death_stopwatch = Stopwatch()
+        self.hurt_cooldown = Stopwatch()
+        self.hurt_cooldown.start()
         # Default/placeholder values for the direction, will be instantly changed on first update of zombie
         # Typically either 1 or -1 or 0
         self.x_dir = 0
         self.y_dir = 0
 
         self.shot = False
+        self.hits_taken = 0
         # We face
         self.facing_right = True
 
@@ -364,13 +386,16 @@ class Zombie(GameObject, ABC):
             player.on_hurt(self)
 
     def on_shot(self):
-        if not self.shot:
-            self.surface.fill((255, 0, 0))
-            self.shot = True
-            self.death_stopwatch.start()
+        if self.hurt_cooldown.has_passed(500):
+            self.hits_taken += 1
+            self.hurt_cooldown.restart()
+            if not self.shot and self.max_hits <= self.hits_taken:
+                self.surface.fill((255, 0, 0))
+                self.shot = True
+                self.death_stopwatch.start()
 
-            if type(current_scene) is World:
-                current_scene.score_queue.append(50)
+                if type(current_scene) is World:
+                    current_scene.score_queue.append(50)
 
         SOUND_HURT.play(0)
 
@@ -525,6 +550,10 @@ class World(Scene, ABC):
     wave_length = 20 * 1000
     bypass_wave = False
 
+    full_auto_enabled = False
+    vamp_enabled = False
+    ricochet_enabled = False
+
 
     def __init__(self):
         super().__init__("world")
@@ -634,7 +663,7 @@ class World(Scene, ABC):
         if len(self.score_queue) != 0:
             self.score_add_delay.start()
 
-            delay = max(750 - (len(self.score_queue) * 50), 100)
+            delay = max(750 - (len(self.score_queue) * 50), 25)
             if self.score_add_delay.has_passed(delay):
                 # pygame.mixer.Sound.play(SOUND_SCORE_ADD, 0)
                 game_score += self.score_queue[0]
@@ -702,10 +731,9 @@ class World(Scene, ABC):
                         change_scene("menu")
 
         # Calculate duration of our spawn delay based on what wave we are
-        n = (self.current_wave - 1) * 500
-        r = (random.random() * 250.0)
+        n = (self.current_wave - 1) * 250
         # The absolute shortest delay is 100 ms
-        delay = max(r + 2000 - n, 100)
+        delay = max(2500 - n, 50)
 
         # Spawn zombies when needed
         if self.spawn_timer.has_passed(delay):
@@ -836,7 +864,7 @@ class UpgradeScreen(Scene, ABC):
         self.next_wave_text = FONT.render("Start next wave!", True, BLACK)
         self.buy_upgrades_text = FONT_SMALL.render("Buy upgrades:", True, WHITE)
 
-
+        self.auto_rect = None
 
 
     def update_scene(self, events, keys):
@@ -867,6 +895,12 @@ class UpgradeScreen(Scene, ABC):
                                 (WIDTH / 2) - (self.next_wave_text.get_width() / 2), self.next_wave_rect.centery - (self.next_wave_text.get_height() / 2)
                             )
         )
+
+
+        # Full auto upgrade button
+        
+
+        auto_text = FONT.render("Full auto upgrade - 5000 pts", True)
 
 
 
