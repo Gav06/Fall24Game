@@ -954,7 +954,6 @@ class UpgradeScreen(Scene, ABC):
         v_y = 240
         if self.vamp_rect is None:
             self.vamp_rect = pygame.Rect(v_x, v_y, vamp_text.get_width(), vamp_text.get_height())
-
         display_screen.blit(vamp_text, (v_x, v_y))
 
         # Ricochet upgrade button
@@ -970,8 +969,12 @@ class UpgradeScreen(Scene, ABC):
         r_y = 340
         if self.ricochet_rect is None:
             self.ricochet_rect = pygame.Rect(r_x, r_y, ricochet_text.get_width(), ricochet_text.get_height())
-
         display_screen.blit(ricochet_text, (r_x, r_y))
+
+
+        """ Score render"""
+        score_text = FONT_SMALL.render(f"Points: {game_score}", True, WHITE)
+        display_screen.blit(score_text, ((WIDTH / 2) - (score_text.get_width() / 2), 460))
 
 
 
