@@ -834,6 +834,7 @@ class UpgradeScreen(Scene, ABC):
 
 
 
+
     def update_scene(self, events, keys):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN and self.next_wave_rect.collidepoint(event.pos):
