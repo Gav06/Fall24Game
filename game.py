@@ -444,10 +444,15 @@ class MainMenu(Scene, ABC):
     star_count = 50
     star_list = [(random.randint(0, WIDTH), random.randint(0, HEIGHT * 3 // 4)) for _ in range(star_count)]
 
-    square1 = pygame.Rect(100, HEIGHT * 6 // 8, 80, 100)
-    square2 = pygame.Rect(100, HEIGHT * 6 // 8, 80, 100)
-    square_distance = 90
-    square_speed = 2
+    square1 = pygame.Rect(100, HEIGHT * 6 // 8, 100, 120)
+    square2 = pygame.Rect(100, HEIGHT * 6 // 8, 100, 120)
+    square3 = pygame.Rect(100, HEIGHT * 6 // 8, 100, 120)
+    square4 = pygame.Rect(100, HEIGHT * 6 // 8, 100, 120)
+
+    square_distance = 100
+    dist_from_man = 170
+
+    square_speed = 5
     chasing = True
 
     square1_img_right = pygame.image.load("assets/CharIdleRight.png").convert_alpha()
@@ -458,6 +463,14 @@ class MainMenu(Scene, ABC):
     square2_img_right = pygame.transform.scale(square2_img_right, (square2.width, square2.height))
     square2_img = square2_img_right  # Start with right-facing image
 
+    square3_img_right = pygame.image.load("assets/Zombie_3.png")
+    square3_img_right = pygame.transform.scale(square3_img_right, (square3.width, square3.height))
+    square3_img = square3_img_right
+
+    square4_img_right = pygame.image.load("assets/Zombie_Hurt2.png")
+    square4_img_right = pygame.transform.scale(square4_img_right, (square4.width, square4.height))
+    square4_img = square4_img_right
+
     title_text = FONT.render("Survive the Night", True, WHITE)
     title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
 
@@ -467,11 +480,15 @@ class MainMenu(Scene, ABC):
     def __init__(self):
         super().__init__("menu")
         pygame.mixer.init()
-        #self.image1_sound = pygame.mixer.Sound('assets/HelpMe.wav')   #IMPORT SOUND
-        #self.image2_sound = pygame.mixer.Sound('assets/Zombie sound effect.wav')
-        #self.image1_playing = False
-        #self.image2_playing = False
-        #self.image2_sound.set_volume(0.65)
+        self.intro_sound = pygame.mixer.Sound("assets/Scary⧸Tense Music - ＂Look Behind You＂.wav")
+        self.intro_sound.set_volume(2)
+        self.intro_playing = False
+        self.start_sound()
+
+    def start_sound(self):
+        if not self.intro_playing:
+            self.intro_sound.play(loops=1)
+            self.intro_playing = True
 
     def draw_scene(self, display_screen):
         display_screen.fill(BLACK)
@@ -491,11 +508,9 @@ class MainMenu(Scene, ABC):
 
         display_screen.blit(self.square1_img, self.square1)
         display_screen.blit(self.square2_img, self.square2)
+        display_screen.blit(self.square3_img, self.square3)
+        display_screen.blit(self.square4_img, self.square4)
 
-       # if self.square2.colliderect(quarter_rect):
-           # self.play_sound()
-       # else:
-           # self.stop_sound()
 
         display_screen.blit(self.title_text, self.title_rect)
         display_screen.blit(self.start_text, self.start_rect)
@@ -505,47 +520,45 @@ class MainMenu(Scene, ABC):
         if self.chasing:
             self.square1.x -= self.square_speed  # Move left
             self.square2.x = self.square1.x + self.square_distance
+            self.square3.x = self.square1.x + self.dist_from_man
+            self.square4.x = self.square3.x + self.square_distance
                 #IMAGE FLIP
             self.square1_img = pygame.transform.flip(self.square1_img_right, True, False)
             self.square2_img = pygame.transform.flip(self.square2_img_right, True, False)
+            self.square3_img = pygame.transform.flip(self.square3_img_right, True, False)
+            self.square4_img = self.square4_img_right
 
             if self.square2.x < -self.square_distance:
                 self.chasing = False
         else:
             self.square1.x += self.square_speed  # Move right
             self.square2.x = self.square1.x - self.square_distance
+            self.square3.x = self.square1.x - self.dist_from_man
+            self.square4.x = self.square3.x - self.square_distance
                     #IMAGE FLIP
             self.square1_img = self.square1_img_right
             self.square2_img = self.square2_img_right
+            self.square3_img = self.square3_img_right
+            self.square4_img = pygame.transform.flip(self.square4_img_right, True, False)
 
             if self.square1.x > WIDTH:
                 self.chasing = True
 
-    # def play_sound(self):
-     #   if not self.image1_playing:
-      #      self.image1_sound.play(loops=1)
-      #      self.image1_playing = True
+    def stop_sound(self):
+        if self.intro_playing:
+            self.intro_sound.stop()
+            self.intro_playing = False
 
-#        if not self.image2_playing:
- #           self.image2_sound.play(loops=1)
-  #          self.image2_playing = True
-
-   # def stop_sound(self):
-    #    if self.image1_playing:
-     #       self.image1_sound.stop()
-      #      self.image1_playing = False
-
-       # if self.image2_playing:
-        #    self.image2_sound.stop()
-         #   self.image2_playing = False
+    def reset_sound(self):
+        self.intro_playing = False
 
     def update_scene(self, events, keys):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.start_rect.collidepoint(event.pos):
-                    # Switch to level
-                  #  self.stop_sound()
+                    self.stop_sound()
                     change_scene("world")
+
 
 """ End Main Menu """
 
@@ -821,14 +834,14 @@ class DeathScreen(Scene, ABC):
         self.quit_rect = self.quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
 
         pygame.mixer.init()
-        self.zombie_sound = pygame.mixer.Sound('assets/Horror Scary Ghost Sound Effects.wav')
-        self.zombie_sound.set_volume(0.5)
-        self.zombie_playing = False
+        self.end_sound = pygame.mixer.Sound('assets/Horror Scary Ghost Sound Effects.wav')
+        self.end_sound.set_volume(0.5)
+        self.end_playing = False
 
     def start_scene(self):
-        if not self.zombie_playing:
-            self.zombie_sound.play(loops=1)
-            self.zombie_playing = True
+        if not self.end_playing:
+            self.end_sound.play(loops=1)
+            self.end_playing = True
 
     def update_scene(self, events, keys):
         for event in events:
@@ -848,9 +861,9 @@ class DeathScreen(Scene, ABC):
         display_screen.blit(self.quit_text, self.quit_rect)
 
     def stop_sound(self):
-        if self.zombie_playing:
-            self.zombie_sound.stop()
-            self.zombie_playing = False
+        if self.end_playing:
+            self.end_sound.stop()
+            self.end_playing = False
 
     def start_new_game(self):
         global current_scene
@@ -862,7 +875,7 @@ class DeathScreen(Scene, ABC):
         self.score_text = FONT.render(f"Score: {score}", True, WHITE)
 
     def reset_sound(self):
-        self.zombie_playing = False
+        self.end_playing = False
 
 class UpgradeScreen(Scene, ABC):
 
