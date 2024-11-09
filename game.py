@@ -285,7 +285,7 @@ class Bullet(GameObject, ABC):
             else:
                 self.dead = True
 
-        if self.times_bounced >= 3:
+        if self.times_bounced >= 2:
             self.dead = True
 
         self.rect = pygame.Rect(self.pos_x - 2.5, self.pos_y - 2.5, 5.0, 5.0)
@@ -652,7 +652,7 @@ class World(Scene, ABC):
         health = self.player.health
         red = ((100.0 - health) / 100.0) * 255
         green = (health / 100.0) * 255
-        health_text = FONT_SMALL.render(f"Health: {health}", True, (int(red), int(green), 0))
+        health_text = FONT_SMALL.render(f"Health: {round(health, 1)}", True, (int(red), int(green), 0))
         display_screen.blit(health_text, (4, HEIGHT - 4 - health_text.get_height()))
 
         score_text = FONT_SMALL.render(f"Score: {game_score}", True, WHITE)
