@@ -31,7 +31,7 @@ You can shoot bullets by left clicking the mouse.
 Pressing the ESCAPE key will bring you back to the main menu.
 
 
-### Extra content
+### Extra content/Cheats
 
 Pressing backslash (`\`) while in-game will enable some extra cheats and debug features that we left in.
 
