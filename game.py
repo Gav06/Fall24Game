@@ -1043,6 +1043,8 @@ def update_pass():
     for event in events:
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            running = False
 
     current_scene.update_scene(events, keys)
 
