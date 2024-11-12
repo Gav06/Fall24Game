@@ -816,6 +816,7 @@ class World(Scene, ABC):
 
 """ End World """
 
+""" Begin Death screen """
 
 class DeathScreen(Scene, ABC):
 
@@ -876,6 +877,10 @@ class DeathScreen(Scene, ABC):
 
     def reset_sound(self):
         self.end_playing = False
+
+""" End Death screen"""
+
+""" Begin upgrade screen """
 
 class UpgradeScreen(Scene, ABC):
 
@@ -989,15 +994,15 @@ class UpgradeScreen(Scene, ABC):
         score_text = FONT_SMALL.render(f"Points: {game_score}", True, WHITE)
         display_screen.blit(score_text, ((WIDTH / 2) - (score_text.get_width() / 2), 460))
 
-
+""" End upgrade screen """
 
 # This Section is for game scenes and variables, not stuff needed explicitly in each level or in the gameplay itself
 MAIN_MENU = MainMenu()  # "menu"
 WORLD = World()         # "world"
 DEATH = DeathScreen()
 UPGRADES = UpgradeScreen()
-# death state not added yet lol
 
+# Used for selecting scenes with change_scene function
 scenes = {
     MAIN_MENU.name: MAIN_MENU,
     WORLD.name: WORLD,
@@ -1056,8 +1061,10 @@ def game_init():
 def game_loop():
     global running
 
+    frames = 0
+    frame_timer.start()
     while running:
-        frame_timer.restart()
+
 
         # Updates
         update_pass()
@@ -1065,8 +1072,12 @@ def game_loop():
 
         pygame.display.flip()
         pygame.time.Clock().tick(60)
+        frames += 1
 
-        #print(f"Frame time {frame_timer.elapsed_time()}ms")
+        if frame_timer.has_passed(1000):
+            print(f"FPS: {frames}")
+            frame_timer.restart()
+            frames = 0
 
 
 def __main__():
