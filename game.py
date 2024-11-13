@@ -575,9 +575,7 @@ class World(Scene, ABC):
     wave_length = 20 * 1000
     bypass_wave = False
 
-    full_auto_enabled = False
-    vamp_enabled = False
-    ricochet_enabled = False
+
 
 
     def __init__(self):
@@ -587,6 +585,10 @@ class World(Scene, ABC):
         self.spawn_timer = Stopwatch()
         self.zombie_count = 0
         self.kill_count = 0
+
+        self.full_auto_enabled = False
+        self.vamp_enabled = False
+        self.ricochet_enabled = False
 
         self.should_spawn_zombies = False
         """ Survival wave variables section """
@@ -787,6 +789,7 @@ class World(Scene, ABC):
 
     def reset(self):
         self.game_objects.clear()
+        game_score = 0
         self.__init__()
 
     # Called many times throughout the course of a wave, spawns a random zombie in a random location about the player
