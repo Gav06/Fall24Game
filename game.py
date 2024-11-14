@@ -758,7 +758,7 @@ class World(Scene, ABC):
                         change_scene("menu")
 
         # Calculate duration of our spawn delay based on what wave we are
-        n = self.current_wave * 375
+        n = self.current_wave * 250
         # The absolute shortest delay is 100 ms
         delay = max(2500 - n, 50)
 
