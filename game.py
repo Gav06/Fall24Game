@@ -609,6 +609,9 @@ class World(Scene, ABC):
 
         self.score_queue = []
 
+        global game_score
+        game_score = 0
+
 
     def draw_scene(self, display_screen):
         global show_debug_hitboxes, WHITE, game_score, WIDTH, HEIGHT, dimming
